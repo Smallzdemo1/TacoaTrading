@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glass Products — Tacoa General Trading | Kwekwe, Zimbabwe</title>
+  <meta name="description" content="Browse Tacoa General Trading's current glass product range, including clear float, reflective, mirror and frosted glass imported for the Zimbabwean market." />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .products-intro { background: var(--off-white); }
+    .pdc-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    @media (max-width: 900px) { .pdc-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 560px) { .pdc-grid { grid-template-columns: 1fr; } }
+    .glass-summary {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 28px;
+      align-items: start;
+    }
+    .summary-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 28px;
+    }
+    .spec-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .spec-pill {
+      padding: 9px 14px;
+      border-radius: 100px;
+      background: var(--primary-pale);
+      color: var(--primary-dark);
+      font-size: .82rem;
+      font-weight: 600;
+    }
+    .stock-note {
+      font-size: .88rem;
+      color: var(--text-light);
+      margin-top: 18px;
+    }
+    .cat-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .cat-divider::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+    .cat-divider h2 { white-space: nowrap; font-size: 1.8rem; }
+    .product-detail-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--white);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .pdc-top {
+      padding: 24px 24px 16px;
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .pdc-top h3,
+    .pdc-top p { color: var(--white); }
+    .pdc-top p { font-size: .86rem; opacity: .84; }
+    .pdc-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pdc-icon svg { width: 28px; height: 28px; fill: var(--white); }
+    .pdc-photo {
+      height: 180px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .pdc-body { padding: 24px; }
+    .pdc-body ul {
+      list-style: disc;
+      margin-left: 18px;
+      color: var(--text-body);
+    }
+    .pdc-body li + li { margin-top: 8px; }
+    .availability-table-wrap {
+      overflow-x: auto;
+      margin-top: 32px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--white);
+      box-shadow: var(--shadow-sm);
+    }
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+    .spec-table th, .spec-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .spec-table th {
+      background: var(--primary-pale);
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+    .spec-table tr:nth-child(even) td { background: var(--off-white); }
+    @media (max-width: 900px) {
+      .glass-summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ NAVBAR ══════════════════════════════════════════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
+          <div class="nav-logo-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M3 9L12 2l9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22" fill="rgba(255,255,255,0.4)"/></svg></div>
+          <div class="nav-logo-text">Tacoa General Trading<span>Imported Architectural Glass</span></div>
+        </a>
+        <ul class="nav-links">
+          <li><a href="index.html"      class="nav-link">Home</a></li>
+          <li><a href="about.html"      class="nav-link">About</a></li>
+          <li><a href="products.html" class="nav-link active">Glass Products</a></li>
+          <li><a href="contact.html"    class="nav-link">Contact</a></li>
+        </ul>
+        <a href="contact.html" class="btn btn-accent nav-cta">Get a Quote</a>
+        <button class="hamburger" id="hamburger" aria-label="Open menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <nav class="mobile-nav" id="mobileNav">
+    <a href="index.html"      class="mobile-nav-link">Home</a>
+    <a href="about.html"      class="mobile-nav-link">About Us</a>
+    <a href="products.html"   class="mobile-nav-link">Glass Products</a>
+    <a href="contact.html"    class="mobile-nav-link">Contact</a>
+    <div style="margin-top:28px;"><a href="contact.html" class="btn btn-primary" style="width:100%;justify-content:center;">Get a Quote</a></div>
+  </nav>
+
+  <!-- ══ PAGE HERO ═══════════════════════════════════════════ -->
+  <section class="page-hero">
+    <div class="container">
+      <div class="page-hero-content">
+        <div class="breadcrumb">
+          <a href="index.html">Home</a><span>/</span><span class="current">Products</span>
+        </div>
+        <h1>Glass Products</h1>
+        <p>Browse our customer-ready glass range for windows, shopfronts, partitions, bathrooms and interior projects, with cut-to-size service available.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ INTRO / QUICK JUMP ══════════════════════════════════ -->
+  <section class="section-sm products-intro">
+    <div class="container">
+      <div class="glass-summary">
+        <div class="summary-card fade-up">
+          <span class="label">Glass Range</span>
+          <h2 style="font-size:2rem; margin-bottom:12px;">Glass Options for Everyday Building and Interior Use</h2>
+          <p>Whether you are glazing a window, fitting out a shop, adding privacy to a bathroom or installing mirrors indoors, this range covers practical starting options and can be cut to your required sizes.</p>
+          <div class="spec-pill-row">
+            <span class="spec-pill">Clear glass</span>
+            <span class="spec-pill">Reflective glass</span>
+            <span class="spec-pill">Mirror glass</span>
+            <span class="spec-pill">Privacy glass</span>
+            <span class="spec-pill">Cut to size</span>
+          </div>
+          <p class="stock-note">Need help deciding between reflective, clear, mirror or frosted glass? Use the contact form and include where the glass will be used, the thickness you need, the estimated size or quantity, and whether you want it cut to size.</p>
+        </div>
+        <div class="summary-card fade-up delay-2">
+          <span class="label">Current Categories</span>
+          <ul style="list-style:disc; margin-left:18px; color:var(--text-body);">
+            <li id="reflective">Reflective glass for facades and heat control</li>
+            <li id="clear-float">Clear float glass for everyday glazing</li>
+            <li id="mirror">Mirror glass for interiors and shopfitting</li>
+            <li id="frosted">Frosted glass for privacy applications</li>
+          </ul>
+          <div style="margin-top:24px;">
+            <a href="contact.html" class="btn btn-primary">Request Current Pricing</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ GLASS RANGE ═════════════════════════════════════════ -->
+  <section class="section" id="glass">
+    <div class="container">
+      <div class="cat-divider fade-up">
+        <span class="label" style="white-space:nowrap;flex-shrink:0;">Category 01</span>
+        <h2>Current Glass Line Items</h2>
+      </div>
+      <p class="fade-up" style="max-width:720px;margin-bottom:40px;color:var(--text-light);">
+        Each product card highlights the finish, common use and standard size information customers usually need first. We can also cut many orders to your required dimensions.
+      </p>
+      <div class="pdc-grid">
+        <div class="product-detail-card fade-up delay-1">
+          <div class="pdc-top">
+            <div class="pdc-icon"><svg viewBox="0 0 24 24" fill="white"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></div>
+            <div><h3>Euro Grey Reflective Glass</h3><p>Modern reflective glazing for facades and windows</p></div>
+          </div>
+          <div class="pdc-photo" style="background-image:url('https://images.pexels.com/photos/5537829/pexels-photo-5537829.jpeg?auto=compress&cs=tinysrgb&w=900'); background-position:center;"></div>
+          <div class="pdc-body">
+            <ul>
+              <li>4 mm sheets in 1830 × 2440 mm</li>
+              <li>Popular for facades, shopfronts and large exterior windows</li>
+              <li>Helps reduce glare and solar heat gain</li>
+              <li>Also stocked in 5 mm for higher-performance applications</li>
+            </ul>
+            <a href="contact.html" class="btn btn-primary" style="font-size:.85rem;padding:10px 22px;">Request Quote</a>
+          </div>
+        </div>
+
+        <div class="product-detail-card fade-up delay-2">
+          <div class="pdc-top">
+            <div class="pdc-icon"><svg viewBox="0 0 24 24" fill="white"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/></svg></div>
+            <div><h3>Euro Grey Reflective Glass 5 mm</h3><p>Heavier reflective option for larger glazed areas</p></div>
+          </div>
+          <div class="pdc-photo" style="background-image:url('https://images.pexels.com/photos/33084083/pexels-photo-33084083.jpeg?auto=compress&cs=tinysrgb&w=900'); background-position:center;"></div>
+          <div class="pdc-body">
+            <ul>
+              <li>5 mm sheets in 1830 × 2440 mm</li>
+              <li>Suitable where a slightly stronger sheet is preferred</li>
+              <li>Works well for larger glazed areas and higher-performance applications</li>
+              <li>Useful where the job needs the same finish with more body</li>
+            </ul>
+            <a href="contact.html" class="btn btn-primary" style="font-size:.85rem;padding:10px 22px;">Request Quote</a>
+          </div>
+        </div>
+
+        <div class="product-detail-card fade-up delay-3">
+          <div class="pdc-top">
+            <div class="pdc-icon"><svg viewBox="0 0 24 24" fill="white"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/></svg></div>
+            <div><h3>Euro Bronze Reflective Glass</h3><p>Warm-toned reflective glazing for shopfronts and facades</p></div>
+          </div>
+          <div class="pdc-photo" style="background-image:url('https://images.pexels.com/photos/38240550/pexels-photo-38240550.jpeg?auto=compress&cs=tinysrgb&w=900'); background-position:center;"></div>
+          <div class="pdc-body">
+            <ul>
+              <li>4 mm sheets in 1830 × 2440 mm</li>
+              <li>Popular for projects that want solar control with a warmer appearance</li>
+              <li>Often chosen for shopfronts and modern exteriors</li>
+              <li>Best for buyers who want solar control with a warmer colour tone</li>
+            </ul>
+            <a href="contact.html" class="btn btn-primary" style="font-size:.85rem;padding:10px 22px;">Request Quote</a>
+          </div>
+        </div>
+
+        <div class="product-detail-card fade-up delay-1">
+          <div class="pdc-top">
+            <div class="pdc-icon"><svg viewBox="0 0 24 24" fill="white"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/></svg></div>
+            <div><h3>Clear Float Glass</h3><p>Standard transparent glazing for everyday jobs</p></div>
+          </div>
+          <div class="pdc-photo" style="background-image:url('https://images.pexels.com/photos/7638806/pexels-photo-7638806.jpeg?auto=compress&cs=tinysrgb&w=900'); background-position:center;"></div>
+          <div class="pdc-body">
+            <ul>
+              <li>3 mm sheets in 1830 × 1220 mm</li>
+              <li>Suitable for general windows, cabinet glazing and cost-conscious jobs</li>
+              <li>A practical everyday choice for clear visibility</li>
+              <li>Suitable for general windows, cabinet glazing and cost-sensitive jobs</li>
+            </ul>
+            <a href="contact.html" class="btn btn-primary" style="font-size:.85rem;padding:10px 22px;">Request Quote</a>
+          </div>
+        </div>
+
+        <div class="product-detail-card fade-up delay-2">
+          <div class="pdc-top">
+            <div class="pdc-icon"><svg viewBox="0 0 24 24" fill="white"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="6" y="6" width="12" height="12" rx="1" fill="rgba(255,255,255,0.35)"/></svg></div>
+            <div><h3>Clear Aluminium Mirror</h3><p>Interior mirror sheets for wardrobes and decor</p></div>
+          </div>
+          <div class="pdc-photo" style="background-image:url('https://images.pexels.com/photos/6508346/pexels-photo-6508346.jpeg?auto=compress&cs=tinysrgb&w=900'); background-position:center;"></div>
+          <div class="pdc-body">
+            <ul>
+              <li>3 mm sheets in 1830 × 1220 mm</li>
+              <li>Ideal for wardrobes, feature walls and retail interiors</li>
+              <li>Popular where clean reflection and decorative impact matter</li>
+              <li>Works well for wardrobes, feature walls and shopfitting installations</li>
+            </ul>
+            <a href="contact.html" class="btn btn-primary" style="font-size:.85rem;padding:10px 22px;">Request Quote</a>
+          </div>
+        </div>
+
+        <div class="product-detail-card fade-up delay-3">
+          <div class="pdc-top">
+            <div class="pdc-icon"><svg viewBox="0 0 24 24" fill="white"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/></svg></div>
+            <div><h3>Clear Frosted Glass</h3><p>Privacy-ready glazing for interiors and wet areas</p></div>
+          </div>
+          <div class="pdc-photo" style="background-image:url('https://images.pexels.com/photos/29508048/pexels-photo-29508048.jpeg?auto=compress&cs=tinysrgb&w=900'); background-position:center; filter: grayscale(15%) brightness(1.04);"></div>
+          <div class="pdc-body">
+            <ul>
+              <li>4 mm sheets in 1830 × 2440 mm</li>
+              <li>Useful for bathrooms, offices, doors and room dividers</li>
+              <li>Lets light through while improving privacy</li>
+              <li>Useful for bathrooms, offices, partitions and doors that need privacy</li>
+            </ul>
+            <a href="contact.html" class="btn btn-primary" style="font-size:.85rem;padding:10px 22px;">Request Quote</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="availability-table-wrap fade-up delay-2">
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Thickness</th>
+              <th>Sheet Size</th>
+              <th>Common Use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Euro Grey Reflective Glass</td>
+              <td>4 mm</td>
+              <td>1830 × 2440 mm</td>
+              <td>Exterior windows, facades, shopfronts</td>
+            </tr>
+            <tr>
+              <td>Euro Grey Reflective Glass</td>
+              <td>5 mm</td>
+              <td>1830 × 2440 mm</td>
+              <td>Larger glazed areas, stronger reflective applications</td>
+            </tr>
+            <tr>
+              <td>Euro Bronze Reflective Glass</td>
+              <td>4 mm</td>
+              <td>1830 × 2440 mm</td>
+              <td>Warm-tone exterior glazing, shopfronts</td>
+            </tr>
+            <tr>
+              <td>Clear Float Glass</td>
+              <td>3 mm</td>
+              <td>1830 × 1220 mm</td>
+              <td>General window glazing, cabinets, furniture</td>
+            </tr>
+            <tr>
+              <td>Clear Aluminium Mirror</td>
+              <td>3 mm</td>
+              <td>1830 × 1220 mm</td>
+              <td>Wardrobes, feature walls, interiors</td>
+            </tr>
+            <tr>
+              <td>Clear Frosted Glass</td>
+              <td>4 mm</td>
+              <td>1830 × 2440 mm</td>
+              <td>Bathrooms, partitions, privacy glazing</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CTA ══════════════════════════════════════════════════ -->
+  <section class="cta-banner">
+    <div class="cta-content fade-up">
+      <span class="label white">Need a Quote?</span>
+      <h2>Need Help Choosing the Right Glass?</h2>
+      <p>Tell us whether the job is for windows, a shopfront, a bathroom, partitions or interiors, and whether you need full sheets or cut sizes, and we will guide you to the most suitable option.</p>
+      <div class="cta-actions">
+        <a href="contact.html" class="btn btn-accent">Contact Us</a>
+        <a href="index.html" class="btn btn-outline" style="border-color:rgba(255,255,255,.5);color:white;">Back to Home</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ═══════════════════════════════════════════════ -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="nav-logo" style="text-decoration:none;">
+            <div class="nav-logo-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M3 9L12 2l9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg></div>
+            <div class="nav-logo-text">Tacoa General Trading<span>Imported Architectural Glass</span></div>
+          </a>
+          <p>Imported architectural glass for homes, shopfronts, partitions and interior projects in Kwekwe and across the Midlands.</p>
+          <div class="footer-contact">
+            <a href="tel:+263777726221"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>+263 77 772 6221</a>
+            <a href="mailto:info@tacoatrading.com"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>info@tacoatrading.com</a>
+            <a href="https://maps.google.com/?q=913+Industrial+Road,+Kwekwe,+Midlands,+Zimbabwe" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>913 Industrial Road, Kwekwe, Midlands, Zimbabwe</a>
+          </div>
+        </div>
+        <div class="footer-col"><h4>Products</h4><ul><li><a href="#reflective">Reflective Glass</a></li><li><a href="#clear-float">Clear Float Glass</a></li><li><a href="#mirror">Mirror Glass</a></li><li><a href="#frosted">Frosted Glass</a></li></ul></div>
+        <div class="footer-col"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="about.html">About Us</a></li><li><a href="products.html">Glass Products</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+        <div class="footer-col footer-newsletter">
+          <h4>Stay Updated</h4>
+          <p>Get the latest product updates and special offers.</p>
+          <form class="newsletter-form" onsubmit="return false;"><input type="email" class="newsletter-input" placeholder="Your email address" autocomplete="email"/><button class="newsletter-btn" type="submit">Subscribe</button></form>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Tacoa General Trading. All rights reserved. Kwekwe, Zimbabwe.</p>
+        <div class="social-links">
+          <a href="#" class="social-link" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+          <a href="#" class="social-link" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+          <a href="#" class="social-link" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Us — Tacoa General Trading Glass Quotes | Kwekwe, Zimbabwe</title>
+  <meta name="description" content="Request a quote for imported architectural glass from Tacoa General Trading in Kwekwe, Zimbabwe." />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .map-placeholder {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      border-radius: var(--radius-lg);
+      height: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      margin-top: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .map-placeholder::before {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.06);
+      bottom: -80px; right: -60px;
+    }
+    .map-inner { position: relative; z-index: 1; }
+    .map-inner svg { width: 48px; height: 48px; fill: rgba(255,255,255,.6); margin: 0 auto 12px; }
+    .map-inner p { color: rgba(255,255,255,.8); font-size: .9rem; }
+    .map-inner a { color: var(--accent); font-weight: 600; font-size: .9rem; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 12px;
+      transition: var(--transition);
+    }
+    .faq-item:hover { border-color: var(--primary); }
+    .faq-q {
+      padding: 18px 22px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: .95rem;
+      color: var(--text-dark);
+      background: var(--white);
+      user-select: none;
+    }
+    .faq-q .arrow {
+      width: 20px; height: 20px;
+      transition: transform .3s ease;
+      flex-shrink: 0;
+      fill: var(--primary);
+    }
+    .faq-item.open .faq-q .arrow { transform: rotate(180deg); }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .3s ease, padding .3s ease;
+      background: var(--off-white);
+      font-size: .9rem;
+      color: var(--text-body);
+      line-height: 1.7;
+    }
+    .faq-a-inner { padding: 0 22px 18px; }
+    .faq-item.open .faq-a { max-height: 200px; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ NAVBAR ══════════════════════════════════════════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="container">
+      <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
+          <div class="nav-logo-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M3 9L12 2l9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22" fill="rgba(255,255,255,0.4)"/></svg></div>
+          <div class="nav-logo-text">Tacoa General Trading<span>Imported Architectural Glass</span></div>
+        </a>
+        <ul class="nav-links">
+          <li><a href="index.html"      class="nav-link">Home</a></li>
+          <li><a href="about.html"      class="nav-link">About</a></li>
+          <li><a href="products.html" class="nav-link">Glass Products</a></li>
+          <li><a href="contact.html"    class="nav-link active">Contact</a></li>
+        </ul>
+        <a href="contact.html" class="btn btn-accent nav-cta">Get a Quote</a>
+        <button class="hamburger" id="hamburger" aria-label="Open menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <nav class="mobile-nav" id="mobileNav">
+    <a href="index.html"      class="mobile-nav-link">Home</a>
+    <a href="about.html"      class="mobile-nav-link">About Us</a>
+    <a href="products.html"   class="mobile-nav-link">Glass Products</a>
+    <a href="contact.html"    class="mobile-nav-link">Contact</a>
+    <div style="margin-top:28px;"><a href="contact.html" class="btn btn-primary" style="width:100%;justify-content:center;">Get a Quote</a></div>
+  </nav>
+
+  <!-- ══ PAGE HERO ═══════════════════════════════════════════ -->
+  <section class="page-hero">
+    <div class="container">
+      <div class="page-hero-content">
+        <div class="breadcrumb">
+          <a href="index.html">Home</a><span>/</span><span class="current">Contact Us</span>
+        </div>
+        <h1>Get in Touch</h1>
+        <p>Need imported glass for a project, shopfront, home or interior job? Tell us what finish, thickness and cut size you need and our team will help.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CONTACT SECTION ═════════════════════════════════════ -->
+  <section class="section">
+    <div class="container">
+      <div class="contact-grid">
+
+        <!-- Info Cards -->
+        <div class="contact-info">
+          <div class="info-card fade-up delay-1">
+            <div class="info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <div class="info-text">
+              <h4>Our Location</h4>
+              <p>913 Industrial Road<br/>Kwekwe, Midlands, Zimbabwe</p>
+            </div>
+          </div>
+
+          <div class="info-card fade-up delay-2">
+            <div class="info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+            </div>
+            <div class="info-text">
+              <h4>Phone</h4>
+              <a href="tel:+263777726221">+263 77 772 6221</a><br/>
+              <a href="tel:+263777726221">+263 77 772 6221 (WhatsApp)</a>
+            </div>
+          </div>
+
+          <div class="info-card fade-up delay-3">
+            <div class="info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div class="info-text">
+              <h4>Email</h4>
+              <a href="mailto:info@tacoatrading.com">info@tacoatrading.com</a>
+            </div>
+          </div>
+
+          <div class="info-card fade-up delay-1">
+            <div class="info-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div class="info-text">
+              <h4>Business Hours</h4>
+              <p>Monday – Friday: 8:00am – 5:00pm<br/>Saturday: 8:00am – 1:00pm<br/>Sunday: Closed</p>
+            </div>
+          </div>
+
+          <!-- Social -->
+          <div class="fade-up delay-2" style="margin-top:8px;">
+            <h4 style="font-size:.88rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-light);margin-bottom:14px;">Connect With Us</h4>
+            <div style="display:flex;gap:12px;">
+              <a href="#" style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--primary-pale);border-radius:8px;font-size:.88rem;font-weight:600;color:var(--primary);transition:var(--transition);">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>Facebook
+              </a>
+              <a href="#" style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:#e8f5e9;border-radius:8px;font-size:.88rem;font-weight:600;color:#1a7a45;transition:var(--transition);">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quote Form -->
+        <div class="contact-form-wrap fade-up delay-2">
+          <h2 style="font-size:1.6rem;margin-bottom:8px;">Request a Glass Quote</h2>
+          <p style="color:var(--text-light);margin-bottom:28px;font-size:.9rem;">Fill in the form below with the glass type, thickness, sheet size, cut size or quantity you need and our team will respond within 24 hours.</p>
+
+          <form id="quoteForm" onsubmit="handleFormSubmit(event);">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="firstName">First Name *</label>
+                <input type="text" id="firstName" name="firstName" placeholder="e.g. Tendai" required autocomplete="given-name" />
+              </div>
+              <div class="form-group">
+                <label for="lastName">Last Name *</label>
+                <input type="text" id="lastName" name="lastName" placeholder="e.g. Moyo" required autocomplete="family-name" />
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" placeholder="+263 7XX XXX XXX" required autocomplete="tel" />
+              </div>
+              <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" />
+              </div>
+              <div class="form-group full">
+                <label for="inquiry">Enquiry Type *</label>
+                <select id="inquiry" name="inquiry" required>
+                  <option value="" disabled selected>Select what you need...</option>
+                  <option value="clear-float">Clear Float Glass</option>
+                  <option value="reflective">Reflective Glass</option>
+                  <option value="mirror">Mirror Glass</option>
+                  <option value="frosted">Frosted Glass</option>
+                  <option value="bulk">Bulk Project Enquiry</option>
+                  <option value="other">Other / General Enquiry</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label for="message">Message / Specifications *</label>
+                <textarea id="message" name="message" rows="5" placeholder="Please describe what you need — include quantities, sheet sizes, cut sizes, colours or any other relevant details..." required></textarea>
+              </div>
+              <div class="form-group full">
+                <label for="location">Your Location</label>
+                <input type="text" id="location" name="location" placeholder="e.g. Kwekwe, Gweru, Zvishavane..." autocomplete="address-level2" />
+              </div>
+            </div>
+            <div style="margin-top:24px;">
+              <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-size:1rem;padding:16px;">
+                Send Enquiry
+              </button>
+            </div>
+            <p style="font-size:.78rem;color:var(--text-light);margin-top:14px;text-align:center;">
+              By submitting this form you consent to Tacoa General Trading contacting you regarding your enquiry.
+            </p>
+          </form>
+
+          <div id="formSuccess" style="display:none;text-align:center;padding:40px 20px;">
+            <div style="width:64px;height:64px;background:var(--primary-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h3 style="margin-bottom:10px;">Enquiry Sent!</h3>
+            <p style="color:var(--text-light);">Thank you for reaching out. Our team will get back to you within 24 hours.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Map Placeholder -->
+      <div class="map-placeholder fade-up">
+        <div class="map-inner">
+          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <h3 style="color:white;margin-bottom:8px;">Find Us in Kwekwe</h3>
+          <p>Midlands Province, Zimbabwe</p>
+          <br/>
+          <a href="https://maps.google.com/?q=Kwekwe+Zimbabwe" target="_blank" rel="noopener noreferrer">Open in Google Maps →</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ FAQ ══════════════════════════════════════════════════ -->
+  <section class="section" style="background:var(--off-white);">
+    <div class="container">
+      <div class="section-header fade-up">
+        <span class="label">FAQ</span>
+        <h2>Frequently Asked Questions</h2>
+        <p>Quick answers to the questions we hear most often.</p>
+      </div>
+      <div style="max-width:760px;margin:0 auto;">
+        <div class="faq-item fade-up delay-1">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Do you cut glass to size?
+            <svg class="arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="faq-a"><div class="faq-a-inner">Yes. We can cut glass to your specified dimensions in-store. Include the glass type, thickness and sizes you need when you request a quote.</div></div>
+        </div>
+        <div class="faq-item fade-up delay-2">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Do you deliver outside of Kwekwe?
+            <svg class="arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="faq-a"><div class="faq-a-inner">Yes, we service the wider Midlands province including Gweru, Zvishavane, Shurugwi and surrounding areas. Delivery is available — contact us for a delivery quote based on your location and order size.</div></div>
+        </div>
+        <div class="faq-item fade-up delay-3">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Do you supply to individual homeowners, or only contractors?
+            <svg class="arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="faq-a"><div class="faq-a-inner">We welcome everyone — homeowners, self-builders, aluminium fabricators and large contractors alike. Walk-in customers are always welcome at our Kwekwe premises during business hours.</div></div>
+        </div>
+        <div class="faq-item fade-up delay-1">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Can you source glass products not shown on the website?
+            <svg class="arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="faq-a"><div class="faq-a-inner">Yes. If you need a glass thickness, finish or size that is not shown on the website, send us the specification and we will advise on availability, sourcing options and lead times.</div></div>
+        </div>
+        <div class="faq-item fade-up delay-2">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Is there a minimum order quantity for glass?
+            <svg class="arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="faq-a"><div class="faq-a-inner">There is no strict minimum order. We can assist with both small and bulk enquiries, and larger quantities may qualify for better pricing depending on the product line.</div></div>
+        </div>
+        <div class="faq-item fade-up delay-3">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Do you accept mobile money (EcoCash / OneMoney) payments?
+            <svg class="arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="faq-a"><div class="faq-a-inner">Yes. We accept cash (ZWL &amp; USD), bank transfer (RTGS), EcoCash, OneMoney and major payment cards. Please confirm with our team at the time of purchase for the most current accepted payment methods.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ═══════════════════════════════════════════════ -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="index.html" class="nav-logo" style="text-decoration:none;">
+            <div class="nav-logo-icon"><svg viewBox="0 0 24 24" fill="white"><path d="M3 9L12 2l9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/></svg></div>
+            <div class="nav-logo-text">Tacoa General Trading<span>Imported Architectural Glass</span></div>
+          </a>
+          <p>Imported architectural glass for homes, shopfronts, partitions and interior projects in Kwekwe and across the Midlands.</p>
+          <div class="footer-contact">
+            <a href="tel:+263777726221"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>+263 77 772 6221</a>
+            <a href="mailto:info@tacoatrading.com"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>info@tacoatrading.com</a>
+            <a href="https://maps.google.com/?q=913+Industrial+Road,+Kwekwe,+Midlands,+Zimbabwe" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>913 Industrial Road, Kwekwe, Midlands, Zimbabwe</a>
+          </div>
+        </div>
+        <div class="footer-col"><h4>Products</h4><ul><li><a href="products.html#reflective">Reflective Glass</a></li><li><a href="products.html#clear-float">Clear Float Glass</a></li><li><a href="products.html#mirror">Mirror Glass</a></li><li><a href="products.html#frosted">Frosted Glass</a></li></ul></div>
+        <div class="footer-col"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="about.html">About Us</a></li><li><a href="products.html">Glass Products</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+        <div class="footer-col footer-newsletter">
+          <h4>Stay Updated</h4>
+          <p>Get the latest product updates and special offers.</p>
+          <form class="newsletter-form" onsubmit="return false;"><input type="email" class="newsletter-input" placeholder="Your email address" autocomplete="email"/><button class="newsletter-btn" type="submit">Subscribe</button></form>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Tacoa General Trading. All rights reserved. Kwekwe, Zimbabwe.</p>
+        <div class="social-links">
+          <a href="#" class="social-link" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+          <a href="#" class="social-link" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+          <a href="#" class="social-link" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    function toggleFaq(el) {
+      const item = el.closest('.faq-item');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    }
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      document.getElementById('quoteForm').style.display = 'none';
+      document.getElementById('formSuccess').style.display = 'block';
+    }
+  </script>
+</body>
+</html>

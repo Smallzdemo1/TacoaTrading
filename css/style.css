@@ -145,7 +145,7 @@ p  { font-size: 1rem; color: var(--text-body); }
 }
 .navbar.scrolled .nav-logo-text { color: var(--primary-dark); }
 .navbar.scrolled .nav-logo-icon {
-  box-shadow: 0 6px 16px rgba(26,122,69,.24);
+  box-shadow: 0 8px 18px rgba(0,0,0,.22);
 }
 .navbar.scrolled .nav-link      { color: var(--text-dark); }
 .navbar.scrolled .nav-link:hover { color: var(--primary); }
@@ -160,8 +160,10 @@ p  { font-size: 1rem; color: var(--text-body); }
 .nav-logo { display: flex; align-items: center; gap: 12px; }
 .nav-logo-icon {
   width: 52px; height: 52px;
-  background: var(--primary);
+  background: #11161a;
   border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }

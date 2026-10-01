@@ -144,6 +144,9 @@ p  { font-size: 1rem; color: var(--text-body); }
   padding: 12px 0;
 }
 .navbar.scrolled .nav-logo-text { color: var(--primary-dark); }
+.navbar.scrolled .nav-logo-icon {
+  box-shadow: 0 6px 16px rgba(26,122,69,.24);
+}
 .navbar.scrolled .nav-link      { color: var(--text-dark); }
 .navbar.scrolled .nav-link:hover { color: var(--primary); }
 
@@ -154,29 +157,29 @@ p  { font-size: 1rem; color: var(--text-body); }
   gap: 24px;
 }
 
-.nav-logo { display: flex; align-items: center; gap: 10px; }
+.nav-logo { display: flex; align-items: center; gap: 12px; }
 .nav-logo-icon {
-  width: 42px; height: 42px;
+  width: 52px; height: 52px;
   background: var(--primary);
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.nav-logo-icon svg { width: 24px; height: 24px; fill: white; }
-.nav-logo-icon img { width: 24px; height: 24px; display: block; }
+.nav-logo-icon svg { width: 30px; height: 30px; fill: white; }
+.nav-logo-icon img { width: 30px; height: 30px; display: block; }
 .nav-logo-text {
   font-family: 'Poppins', sans-serif;
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-weight: 800;
+  font-size: 1.22rem;
   color: var(--white);
   line-height: 1.15;
   transition: var(--transition);
 }
 .nav-logo-text span {
   display: block;
-  font-size: .7rem;
-  font-weight: 400;
-  opacity: .75;
+  font-size: .74rem;
+  font-weight: 500;
+  opacity: .86;
   letter-spacing: .04em;
 }
 
@@ -1094,6 +1097,9 @@ footer {
 @media (max-width: 900px) {
   .nav-links, .nav-cta { display: none; }
   .hamburger { display: flex; }
+  .nav-logo-icon { width: 48px; height: 48px; }
+  .nav-logo-icon svg, .nav-logo-icon img { width: 27px; height: 27px; }
+  .nav-logo-text { font-size: 1.1rem; }
   .hero-grid  { grid-template-columns: 1fr; }
   .hero-visual { display: none; }
   .about-grid { grid-template-columns: 1fr; }
@@ -1111,6 +1117,10 @@ footer {
   .section { padding: 64px 0; }
   h1 { font-size: 2rem; }
   h2 { font-size: 1.6rem; }
+  .nav-logo-icon { width: 44px; height: 44px; border-radius: 10px; }
+  .nav-logo-icon svg, .nav-logo-icon img { width: 24px; height: 24px; }
+  .nav-logo-text { font-size: 1rem; }
+  .nav-logo-text span { font-size: .68rem; }
   .products-grid  { grid-template-columns: 1fr; }
   .values-grid    { grid-template-columns: 1fr; }
   .footer-grid    { grid-template-columns: 1fr; gap: 36px; }

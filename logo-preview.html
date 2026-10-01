@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tacoa Logo Preview</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #0e4d2b;
+      font-family: Arial, sans-serif;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 16px;
+      width: min(1120px, 94vw);
+    }
+    img {
+      width: 120px;
+      height: 120px;
+      display: block;
+      margin: 0 auto 12px;
+    }
+    p {
+      margin: 0;
+      color: #ffffff;
+      opacity: 0.85;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+    }
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <div class="card">
+      <img src="assets/logo/tacoa-mark.svg" alt="Tacoa logo original" />
+      <p>Original</p>
+    </div>
+    <div class="card">
+      <img src="assets/logo/tacoa-mark-bold.svg" alt="Tacoa logo bold" />
+      <p>Variant A: Bold</p>
+    </div>
+    <div class="card">
+      <img src="assets/logo/tacoa-mark-wide.svg" alt="Tacoa logo wide" />
+      <p>Variant B: Wide Roof</p>
+    </div>
+    <div class="card">
+      <img src="assets/logo/tacoa-mark-t.svg" alt="Tacoa logo with T" />
+      <p>Variant C: T Monogram</p>
+    </div>
+  </div>
+</body>
+</html>

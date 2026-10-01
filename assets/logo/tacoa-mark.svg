@@ -1,8 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Tacoa logo mark">
-  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8">
-    <rect x="3.8" y="4.3" width="7.3" height="15.4" rx="1.5"/>
-    <rect x="12.9" y="4.3" width="7.3" height="15.4" rx="1.5"/>
-    <path d="M11.1 8.3l1.8-1.8M11.1 16.3l1.8-1.8"/>
+  <path d="M3.4 10.4L12 3.8l8.6 6.6v8.8a1.6 1.6 0 0 1-1.6 1.6H5a1.6 1.6 0 0 1-1.6-1.6z" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round"/>
+  <g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.5" y="11" width="4.5" height="7" rx="1"/>
+    <rect x="13" y="11" width="4.5" height="7" rx="1"/>
+    <path d="M11 14.5h2"/>
   </g>
-  <circle cx="18.9" cy="6.1" r="1.2" fill="#f5a623"/>
+  <circle cx="18.8" cy="6.2" r="1.2" fill="#f5a623"/>
 </svg>

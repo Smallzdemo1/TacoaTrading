@@ -163,6 +163,7 @@ p  { font-size: 1rem; color: var(--text-body); }
   flex-shrink: 0;
 }
 .nav-logo-icon svg { width: 24px; height: 24px; fill: white; }
+.nav-logo-icon img { width: 24px; height: 24px; display: block; }
 .nav-logo-text {
   font-family: 'Poppins', sans-serif;
   font-weight: 700;

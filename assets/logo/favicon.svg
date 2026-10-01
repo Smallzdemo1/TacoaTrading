@@ -6,7 +6,7 @@
     <rect x="35" y="30" width="11" height="17" rx="2"/>
   </g>
   <g stroke="#f5a623" stroke-width="4" stroke-linecap="round">
-    <path d="M28 37h8"/>
-    <path d="M32 37v6"/>
+    <path d="M29 37h6"/>
+    <path d="M32 37v5"/>
   </g>
 </svg>

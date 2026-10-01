@@ -4,7 +4,6 @@
   <g fill="none" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round">
     <rect x="18" y="30" width="11" height="17" rx="2"/>
     <rect x="35" y="30" width="11" height="17" rx="2"/>
-    <path d="M29 38.5h6"/>
+    <path d="M29 38.5h6" stroke="#f5a623"/>
   </g>
-  <circle cx="45" cy="19" r="3" fill="#f5a623"/>
 </svg>

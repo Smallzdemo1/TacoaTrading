@@ -7,6 +7,7 @@
   <meta name="description" content="Request a quote for imported architectural glass from Tacoa General Trading in Kwekwe, Zimbabwe." />
   <link rel="stylesheet" href="css/style.css" />
   <link rel="icon" type="image/svg+xml" href="assets/logo/favicon.svg?v=2" />
+  <script src="js/supabase-config.js"></script>
   <style>
     .map-placeholder {
       background: linear-gradient(135deg, var(--primary-dark), var(--primary));
@@ -244,6 +245,8 @@
             </p>
           </form>
 
+          <div id="formError" style="display:none;margin-top:16px;padding:12px 14px;border-radius:10px;background:#fff1f1;color:#991b1b;border:1px solid #fecaca;font-size:.9rem;"></div>
+
           <div id="formSuccess" style="display:none;text-align:center;padding:40px 20px;">
             <div style="width:64px;height:64px;background:var(--primary-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
               <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -367,10 +370,65 @@
       document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
       if (!isOpen) item.classList.add('open');
     }
-    function handleFormSubmit(e) {
+    async function handleFormSubmit(e) {
       e.preventDefault();
-      document.getElementById('quoteForm').style.display = 'none';
-      document.getElementById('formSuccess').style.display = 'block';
+
+      const form = document.getElementById('quoteForm');
+      const formError = document.getElementById('formError');
+      const formSuccess = document.getElementById('formSuccess');
+      const submitButton = form.querySelector('button[type="submit"]');
+      const config = window.TACOA_SUPABASE || {};
+
+      formError.style.display = 'none';
+      formError.textContent = '';
+      formSuccess.style.display = 'none';
+
+      if (!config.url || !config.anonKey || config.url.includes('YOUR_PROJECT_REF') || config.anonKey.includes('YOUR_SUPABASE')) {
+        formError.textContent = 'Supabase is not configured yet. Update js/supabase-config.js with your Supabase project URL and anon key.';
+        formError.style.display = 'block';
+        return;
+      }
+
+      const formData = new FormData(form);
+      const payload = {
+        firstName: formData.get('firstName'),
+        lastName: formData.get('lastName'),
+        phone: formData.get('phone'),
+        email: formData.get('email'),
+        inquiry: formData.get('inquiry'),
+        message: formData.get('message'),
+        location: formData.get('location')
+      };
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Sending...';
+
+      try {
+        const response = await fetch(`${config.url}/functions/v1/submit-quote`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': config.anonKey,
+            'Authorization': `Bearer ${config.anonKey}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.ok) {
+          throw new Error(result.error || 'Your enquiry could not be sent. Please try again.');
+        }
+
+        form.style.display = 'none';
+        formSuccess.style.display = 'block';
+      } catch (error) {
+        formError.textContent = error.message || 'Your enquiry could not be sent. Please try again.';
+        formError.style.display = 'block';
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Send Enquiry';
+      }
     }
   </script>
 </body>

@@ -877,6 +877,8 @@ footer {
   flex-wrap: wrap;
 }
 .footer-bottom p { font-size: .83rem; }
+.footer-bottom .staff-link { margin-left: 10px; opacity: .55; text-decoration: underline; }
+.footer-bottom .staff-link:hover { opacity: 1; }
 .social-links { display: flex; gap: 10px; }
 .social-link {
   width: 36px; height: 36px;

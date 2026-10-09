@@ -22,6 +22,8 @@
     return new Date(d).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
   }
   function pct(n) { return (Math.round(n * 10) / 10) + '%'; }
+  // Quantities are square metres, shown with up to 2 decimals.
+  function qtyFmt(n) { return (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
 
   // Builds DOM nodes with text only (never innerHTML), so stored data cannot inject markup.
   function h(tag, props) {
@@ -91,7 +93,7 @@
       h('option', { value: '' }, 'Select a product…'),
       products.map(function (p) {
         return h('option', { value: p.id },
-          p.product_name + (showStock ? ' (' + p.stock_on_hand + ' in stock)' : ''));
+          p.product_name + (showStock ? ' (' + qtyFmt(p.stock_on_hand) + ' sqm in stock)' : ''));
       }));
     return sel;
   }
@@ -157,10 +159,10 @@
       var stockValue = 0;
       var retailValue = 0;
       products.forEach(function (p) {
-        stockValue += p.stock_on_hand * Number(p.unit_cost);
-        retailValue += p.stock_on_hand * Number(p.selling_price);
+        stockValue += Number(p.stock_on_hand) * Number(p.unit_cost);
+        retailValue += Number(p.stock_on_hand) * Number(p.selling_price);
       });
-      var low = products.filter(function (p) { return p.stock_on_hand <= p.reorder_level; });
+      var low = products.filter(function (p) { return Number(p.stock_on_hand) <= Number(p.reorder_level); });
       var net = Number(rep.net_profit);
 
       panel.replaceChildren(
@@ -173,9 +175,9 @@
           stat('New enquiries', String(newLeads), 'Waiting for a reply')
         ),
         card('Low stock',
-          table(['Product', 'In stock', 'Reorder level'],
+          table(['Product', 'In stock (sqm)', 'Reorder level (sqm)'],
             low.map(function (p) {
-              return [p.product_name, h('span', { class: 'badge ' + (p.stock_on_hand === 0 ? 'bad' : 'warn') }, p.stock_on_hand), String(p.reorder_level)];
+              return [p.product_name, h('span', { class: 'badge ' + (Number(p.stock_on_hand) === 0 ? 'bad' : 'warn') }, qtyFmt(p.stock_on_hand)), qtyFmt(p.reorder_level)];
             }), [1, 2]))
       );
     });
@@ -193,8 +195,8 @@
       var datalist = h('datalist', { id: 'categories' }, Object.keys(cats).map(function (c) { return h('option', { value: c }); }));
       var cost = numberInput({ min: '0', step: '0.01', value: e ? e.unit_cost : '' });
       var price = numberInput({ min: '0', step: '0.01', value: e ? e.selling_price : '' });
-      var reorder = numberInput({ min: '0', step: '1', value: e ? e.reorder_level : '0' });
-      var opening = e ? null : numberInput({ min: '0', step: '1', value: '0' });
+      var reorder = numberInput({ min: '0', step: '0.01', value: e ? e.reorder_level : '0' });
+      var opening = e ? null : numberInput({ min: '0', step: '0.01', value: '0' });
 
       var form = h('form', { onsubmit: submitHandler(function () {
         var row = {
@@ -202,7 +204,7 @@
           category: category.value.trim(),
           unit_cost: parseFloat(cost.value),
           selling_price: parseFloat(price.value),
-          reorder_level: parseInt(reorder.value, 10)
+          reorder_level: parseFloat(reorder.value)
         };
         if (e) {
           return db.from('inventory').update(Object.assign({ updated_at: new Date().toISOString() }, row)).eq('id', e.id).then(function (r) {
@@ -212,7 +214,7 @@
         }
         return db.from('inventory').insert([row]).select().single().then(function (r) {
           var created = must(r);
-          var qty = parseInt(opening.value, 10) || 0;
+          var qty = parseFloat(opening.value) || 0;
           if (qty > 0) {
             return db.rpc('record_adjustment', {
               p_product_id: created.id, p_type: 'manual_adjustment', p_qty: qty, p_reason: 'Opening stock'
@@ -222,8 +224,8 @@
       }, e ? 'Product updated' : 'Product added') },
         h('div', { class: 'form-grid' },
           field('Product name', name), field('Category', category), datalist,
-          field('Cost per unit ($)', cost), field('Selling price ($)', price),
-          field('Reorder level', reorder), opening ? field('Opening stock', opening) : null),
+          field('Cost per sqm ($)', cost), field('Selling price per sqm ($)', price),
+          field('Reorder level (sqm)', reorder), opening ? field('Opening stock (sqm)', opening) : null),
         h('div', { class: 'form-actions' },
           h('button', { type: 'submit', class: 'btn btn-primary' }, e ? 'Save changes' : 'Add product'),
           e ? h('button', { type: 'button', class: 'btn btn-small', onclick: function () { editing = null; showTab('inventory'); } }, 'Cancel') : null),
@@ -232,10 +234,10 @@
 
       var rows = products.map(function (p) {
         var margin = Number(p.selling_price) > 0 ? ((p.selling_price - p.unit_cost) / p.selling_price) * 100 : 0;
-        var low = p.stock_on_hand <= p.reorder_level;
+        var low = Number(p.stock_on_hand) <= Number(p.reorder_level);
         return [
           p.product_name, p.category,
-          h('span', { class: 'badge ' + (p.stock_on_hand === 0 ? 'bad' : low ? 'warn' : '') }, p.stock_on_hand),
+          h('span', { class: 'badge ' + (Number(p.stock_on_hand) === 0 ? 'bad' : low ? 'warn' : '') }, qtyFmt(p.stock_on_hand)),
           money(p.unit_cost), money(p.selling_price), pct(margin),
           money(p.stock_on_hand * p.unit_cost),
           h('button', { type: 'button', class: 'btn btn-small', onclick: function () {
@@ -247,7 +249,7 @@
       panel.replaceChildren(
         h('h2', {}, 'Inventory'),
         card(e ? 'Edit product' : 'Add product', form),
-        card('Products', table(['Product', 'Category', 'In stock', 'Cost', 'Price', 'Margin', 'Stock value', ''], rows, [2, 3, 4, 5, 6]))
+        card('Products', table(['Product', 'Category', 'In stock (sqm)', 'Cost / sqm', 'Price / sqm', 'Margin', 'Stock value', ''], rows, [2, 3, 4, 5, 6]))
       );
     });
   }
@@ -261,12 +263,12 @@
     ]).then(function (res) {
       var history = must(res[1]);
       var product = productSelect(true);
-      var qty = numberInput({ min: '1', step: '1', value: '1' });
+      var qty = numberInput({ min: '0.01', step: '0.01', value: '1' });
       var price = numberInput({ min: '0', step: '0.01' });
       var customer = h('input', { type: 'text', maxlength: 120 });
       var total = h('strong', {}, money(0));
 
-      function recalc() { total.textContent = money((parseInt(qty.value, 10) || 0) * (parseFloat(price.value) || 0)); }
+      function recalc() { total.textContent = money((parseFloat(qty.value) || 0) * (parseFloat(price.value) || 0)); }
       product.addEventListener('change', function () {
         var p = productById(product.value);
         price.value = p ? p.selling_price : '';
@@ -277,12 +279,12 @@
 
       var form = h('form', { onsubmit: submitHandler(function () {
         return db.rpc('record_sale', {
-          p_product_id: product.value, p_qty: parseInt(qty.value, 10),
+          p_product_id: product.value, p_qty: parseFloat(qty.value),
           p_unit_price: parseFloat(price.value), p_customer: customer.value
         }).then(must);
       }, 'Sale recorded') },
         h('div', { class: 'form-grid' },
-          field('Product', product), field('Quantity', qty), field('Unit price ($)', price), field('Customer (optional)', customer)),
+          field('Product', product), field('Quantity (sqm)', qty), field('Price per sqm ($)', price), field('Customer (optional)', customer)),
         h('div', { class: 'form-actions' },
           h('button', { type: 'submit', class: 'btn btn-primary' }, 'Record sale'),
           h('span', {}, 'Total: ', total))
@@ -291,9 +293,9 @@
       panel.replaceChildren(
         h('h2', {}, 'Sales'),
         card('Record a sale', form),
-        card('Recent sales', table(['Date', 'Product', 'Qty', 'Unit price', 'Total', 'Customer'],
+        card('Recent sales', table(['Date', 'Product', 'Qty (sqm)', 'Price / sqm', 'Total', 'Customer'],
           history.map(function (s) {
-            return [fmtDate(s.created_at), s.inventory ? s.inventory.product_name : '—', String(s.qty_sold),
+            return [fmtDate(s.created_at), s.inventory ? s.inventory.product_name : '—', qtyFmt(s.qty_sold),
               money(s.unit_price), money(s.total_amount), s.customer_name || '—'];
           }), [2, 3, 4]))
       );
@@ -309,7 +311,7 @@
     ]).then(function (res) {
       var history = must(res[1]);
       var product = productSelect(true);
-      var qty = numberInput({ min: '1', step: '1', value: '1' });
+      var qty = numberInput({ min: '0.01', step: '0.01', value: '1' });
       var cost = numberInput({ min: '0', step: '0.01' });
       var supplier = h('input', { type: 'text', maxlength: 120 });
       product.addEventListener('change', function () {
@@ -319,12 +321,12 @@
 
       var form = h('form', { onsubmit: submitHandler(function () {
         return db.rpc('record_purchase', {
-          p_product_id: product.value, p_qty: parseInt(qty.value, 10),
+          p_product_id: product.value, p_qty: parseFloat(qty.value),
           p_unit_cost: parseFloat(cost.value), p_supplier: supplier.value
         }).then(must);
       }, 'Stock received') },
         h('div', { class: 'form-grid' },
-          field('Product', product), field('Quantity received', qty), field('Cost per unit ($)', cost), field('Supplier (optional)', supplier)),
+          field('Product', product), field('Quantity received (sqm)', qty), field('Cost per sqm ($)', cost), field('Supplier (optional)', supplier)),
         h('div', { class: 'form-actions' }, h('button', { type: 'submit', class: 'btn btn-primary' }, 'Receive stock')),
         h('p', { class: 'hint' }, 'The product cost is updated to the average of existing stock and this delivery.')
       );
@@ -332,9 +334,9 @@
       panel.replaceChildren(
         h('h2', {}, 'Purchases'),
         card('Receive stock', form),
-        card('Recent purchases', table(['Date', 'Product', 'Qty', 'Unit cost', 'Total', 'Supplier'],
+        card('Recent purchases', table(['Date', 'Product', 'Qty (sqm)', 'Cost / sqm', 'Total', 'Supplier'],
           history.map(function (p) {
-            return [fmtDate(p.created_at), p.inventory ? p.inventory.product_name : '—', String(p.qty_bought),
+            return [fmtDate(p.created_at), p.inventory ? p.inventory.product_name : '—', qtyFmt(p.qty_bought),
               money(p.unit_cost), money(p.total_cost), p.supplier || '—'];
           }), [2, 3, 4]))
       );
@@ -364,18 +366,18 @@
       var history = must(res[1]);
       var product = productSelect(true);
       var type = h('select', { required: true }, Object.keys(ADJ_LABELS).map(function (k) { return h('option', { value: k }, ADJ_LABELS[k]); }));
-      var qty = numberInput({ step: '1', value: '1' });
+      var qty = numberInput({ step: '0.01', value: '1' });
       var reason = h('input', { type: 'text', required: true, maxlength: 200, placeholder: 'What happened?' });
       var hint = h('p', { class: 'hint' }, ADJ_HINTS.breakage);
       type.addEventListener('change', function () { hint.textContent = ADJ_HINTS[type.value]; });
 
       var form = h('form', { onsubmit: submitHandler(function () {
         return db.rpc('record_adjustment', {
-          p_product_id: product.value, p_type: type.value, p_qty: parseInt(qty.value, 10), p_reason: reason.value
+          p_product_id: product.value, p_type: type.value, p_qty: parseFloat(qty.value), p_reason: reason.value
         }).then(must);
       }, 'Adjustment recorded') },
         h('div', { class: 'form-grid' },
-          field('Product', product), field('Type', type), field('Quantity', qty), field('Reason', reason)),
+          field('Product', product), field('Type', type), field('Quantity (sqm)', qty), field('Reason', reason)),
         h('div', { class: 'form-actions' }, h('button', { type: 'submit', class: 'btn btn-primary' }, 'Record')),
         hint
       );
@@ -383,11 +385,11 @@
       panel.replaceChildren(
         h('h2', {}, 'Breakages & Loss'),
         card('Record a stock adjustment', form),
-        card('Recent adjustments', table(['Date', 'Product', 'Type', 'Qty', 'Reason'],
+        card('Recent adjustments', table(['Date', 'Product', 'Type', 'Qty (sqm)', 'Reason'],
           history.map(function (a) {
             return [fmtDate(a.created_at), a.inventory ? a.inventory.product_name : '—',
               h('span', { class: 'badge ' + (a.adjustment_type === 'breakage' || a.adjustment_type === 'loss' ? 'bad' : '') }, ADJ_LABELS[a.adjustment_type] || a.adjustment_type),
-              String(a.qty), a.reason || '—'];
+              qtyFmt(a.qty), a.reason || '—'];
           }), [3]))
       );
     });

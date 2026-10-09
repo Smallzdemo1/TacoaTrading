@@ -34,6 +34,13 @@ grant execute on function public.is_admin() to authenticated;
 -- ---------------------------------------------------------------------------
 alter table public.sales add column if not exists unit_cost numeric(12,2) not null default 0;
 
+-- All quantities are square metres (sqm), so they need decimals.
+alter table public.inventory alter column stock_on_hand type numeric(12,2);
+alter table public.inventory alter column reorder_level type numeric(12,2);
+alter table public.purchases alter column qty_bought type numeric(12,2);
+alter table public.sales alter column qty_sold type numeric(12,2);
+alter table public.stock_adjustments alter column qty type numeric(12,2);
+
 alter table public.leads add column if not exists status text not null default 'new';
 alter table public.leads drop constraint if exists leads_status_check;
 alter table public.leads add constraint leads_status_check
@@ -102,9 +109,13 @@ create policy "Admins insert accounting" on public.accounting_entries for insert
 -- so stock and the books can never get out of step.
 -- Accounting sign convention: money in is positive, money out / write-offs negative.
 -- ---------------------------------------------------------------------------
+drop function if exists public.record_sale(uuid, integer, numeric, text);
+drop function if exists public.record_purchase(uuid, integer, numeric, text);
+drop function if exists public.record_adjustment(uuid, text, integer, text);
+
 create or replace function public.record_sale(
   p_product_id uuid,
-  p_qty integer,
+  p_qty numeric,
   p_unit_price numeric,
   p_customer text default null
 )
@@ -118,6 +129,7 @@ declare
   v_sale public.sales%rowtype;
 begin
   if not public.is_admin() then raise exception 'Not authorised'; end if;
+  p_qty := round(p_qty, 2);
   if p_qty is null or p_qty <= 0 then raise exception 'Quantity must be greater than zero'; end if;
   if p_unit_price is null or p_unit_price < 0 then raise exception 'Price cannot be negative'; end if;
 
@@ -144,7 +156,7 @@ $$;
 
 create or replace function public.record_purchase(
   p_product_id uuid,
-  p_qty integer,
+  p_qty numeric,
   p_unit_cost numeric,
   p_supplier text default null
 )
@@ -159,6 +171,7 @@ declare
   v_new_cost numeric(12,2);
 begin
   if not public.is_admin() then raise exception 'Not authorised'; end if;
+  p_qty := round(p_qty, 2);
   if p_qty is null or p_qty <= 0 then raise exception 'Quantity must be greater than zero'; end if;
   if p_unit_cost is null or p_unit_cost < 0 then raise exception 'Cost cannot be negative'; end if;
 
@@ -189,7 +202,7 @@ $$;
 create or replace function public.record_adjustment(
   p_product_id uuid,
   p_type text,
-  p_qty integer,
+  p_qty numeric,
   p_reason text default null
 )
 returns public.stock_adjustments
@@ -200,9 +213,10 @@ as $$
 declare
   v_inv public.inventory%rowtype;
   v_adj public.stock_adjustments%rowtype;
-  v_delta integer;
+  v_delta numeric;
 begin
   if not public.is_admin() then raise exception 'Not authorised'; end if;
+  p_qty := round(p_qty, 2);
   if p_type not in ('breakage', 'loss', 'return', 'manual_adjustment') then
     raise exception 'Invalid adjustment type';
   end if;
@@ -313,14 +327,14 @@ $$;
 -- ---------------------------------------------------------------------------
 -- Only signed-in users may call the functions (and each also checks is_admin()).
 -- ---------------------------------------------------------------------------
-revoke all on function public.record_sale(uuid, integer, numeric, text) from public, anon;
-revoke all on function public.record_purchase(uuid, integer, numeric, text) from public, anon;
-revoke all on function public.record_adjustment(uuid, text, integer, text) from public, anon;
+revoke all on function public.record_sale(uuid, numeric, numeric, text) from public, anon;
+revoke all on function public.record_purchase(uuid, numeric, numeric, text) from public, anon;
+revoke all on function public.record_adjustment(uuid, text, numeric, text) from public, anon;
 revoke all on function public.record_expense(text, numeric, text) from public, anon;
 revoke all on function public.accounting_report(timestamptz, timestamptz) from public, anon;
 
-grant execute on function public.record_sale(uuid, integer, numeric, text) to authenticated;
-grant execute on function public.record_purchase(uuid, integer, numeric, text) to authenticated;
-grant execute on function public.record_adjustment(uuid, text, integer, text) to authenticated;
+grant execute on function public.record_sale(uuid, numeric, numeric, text) to authenticated;
+grant execute on function public.record_purchase(uuid, numeric, numeric, text) to authenticated;
+grant execute on function public.record_adjustment(uuid, text, numeric, text) to authenticated;
 grant execute on function public.record_expense(text, numeric, text) to authenticated;
 grant execute on function public.accounting_report(timestamptz, timestamptz) to authenticated;

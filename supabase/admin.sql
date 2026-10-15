@@ -338,3 +338,21 @@ grant execute on function public.record_purchase(uuid, numeric, numeric, text) t
 grant execute on function public.record_adjustment(uuid, text, numeric, text) to authenticated;
 grant execute on function public.record_expense(text, numeric, text) to authenticated;
 grant execute on function public.accounting_report(timestamptz, timestamptz) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Replies to enquiries, sent from the admin dashboard via the reply-lead
+-- edge function (service role). Admins can read; nobody can edit or delete.
+-- ---------------------------------------------------------------------------
+create table if not exists public.lead_replies (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid not null references public.leads(id) on delete cascade,
+  sent_by text not null,
+  to_email text not null,
+  subject text not null,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_lead_replies_lead on public.lead_replies(lead_id, created_at);
+alter table public.lead_replies enable row level security;
+drop policy if exists "Admins read lead replies" on public.lead_replies;
+create policy "Admins read lead replies" on public.lead_replies for select to authenticated using (public.is_admin());

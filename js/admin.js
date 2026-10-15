@@ -477,10 +477,68 @@
 
   // ------------------------------------------------------------------- leads
 
+  var replyingTo = null;
+
+  var INQUIRY_LABELS = {
+    'clear-float': 'clear float glass', reflective: 'reflective glass', mirror: 'mirror glass',
+    frosted: 'frosted glass', tinted: 'tinted glass', laminated: 'laminated glass',
+    patterned: 'patterned glass', bulk: 'bulk order', other: 'glass'
+  };
+
+  function sendReply(lead, subject, message) {
+    return db.functions.invoke('reply-lead', {
+      body: { leadId: lead.id, subject: subject, message: message }
+    }).then(function (res) {
+      if (!res.error) return;
+      var ctx = res.error.context;
+      if (ctx && typeof ctx.json === 'function') {
+        return ctx.json().then(function (b) { throw new Error((b && b.error) || 'The reply could not be sent.'); },
+          function () { throw new Error('The reply could not be sent.'); });
+      }
+      throw new Error(res.error.message || 'The reply could not be sent.');
+    });
+  }
+
+  function replyCard(lead, replies) {
+    var subject = h('input', { type: 'text', required: true, maxlength: 200,
+      value: 'Re: Your Tacoa enquiry about ' + (INQUIRY_LABELS[lead.inquiry_type] || 'glass') });
+    var message = h('textarea', { required: true, rows: '9', maxlength: 10000 });
+    message.value = 'Hi ' + lead.first_name + ',\n\nThank you for contacting Tacoa General Trading.\n\n\n\nKind regards,\nTacoa General Trading\n+263 77 772 6221\ninfo@tacoatrading.com';
+
+    var form = h('form', { onsubmit: submitHandler(function () {
+      return sendReply(lead, subject.value.trim(), message.value.trim()).then(function () { replyingTo = null; });
+    }, 'Reply sent') },
+      h('div', { class: 'form-grid' }, field('To', h('input', { type: 'text', value: lead.email, readonly: true })), field('Subject', subject)),
+      field('Message', message),
+      h('div', { class: 'form-actions' },
+        h('button', { type: 'submit', class: 'btn btn-primary' }, 'Send reply'),
+        h('button', { type: 'button', class: 'btn btn-small', onclick: function () { replyingTo = null; showTab('leads'); } }, 'Cancel')),
+      h('p', { class: 'hint' }, 'Sent from info@tacoatrading.com. Customer replies arrive in that mailbox, and a copy of this message is sent there too.')
+    );
+
+    return card('Reply to ' + lead.first_name + ' ' + lead.last_name,
+      h('div', { class: 'muted' }, 'Their message:'),
+      h('div', { class: 'msg-cell' }, lead.message),
+      replies.length ? h('div', {},
+        h('p', { class: 'muted' }, 'Already sent:'),
+        replies.map(function (r) {
+          return h('div', { class: 'msg-cell' }, h('strong', {}, fmtDate(r.created_at) + ' \u2014 ' + r.subject), '\n', r.body, '\n\n');
+        })) : null,
+      form);
+  }
+
   function renderLeads() {
-    return db.from('leads').select('*').order('created_at', { ascending: false }).limit(200).then(function (r) {
-      var leads = must(r);
+    return Promise.all([
+      db.from('leads').select('*').order('created_at', { ascending: false }).limit(200),
+      db.from('lead_replies').select('lead_id, subject, body, created_at').order('created_at', { ascending: true })
+    ]).then(function (res) {
+      var leads = must(res[0]);
+      var allReplies = res[1].error ? [] : res[1].data;
+      var byLead = {};
+      allReplies.forEach(function (r) { (byLead[r.lead_id] = byLead[r.lead_id] || []).push(r); });
+
       var rows = leads.map(function (l) {
+        var sent = byLead[l.id] || [];
         var status = h('select', { 'aria-label': 'Status', onchange: function (e) {
           db.from('leads').update({ status: e.target.value }).eq('id', l.id).then(function (res) {
             if (res.error) toast(res.error.message, 'error'); else toast('Status updated', 'ok');
@@ -494,15 +552,25 @@
           h('div', {}, h('strong', {}, l.first_name + ' ' + l.last_name), h('div', { class: 'muted' }, l.location || '')),
           h('div', {},
             phone ? h('a', { href: 'tel:' + phone }, l.phone) : l.phone,
-            l.email ? h('div', {}, h('a', { href: 'mailto:' + encodeURIComponent(l.email) }, l.email)) : null),
+            l.email ? h('div', {}, l.email) : null),
           l.inquiry_type,
           h('div', { class: 'msg-cell' }, l.message),
-          status
+          status,
+          l.email
+            ? h('div', {},
+                h('button', { type: 'button', class: 'btn btn-small', onclick: function () {
+                  replyingTo = l.id; showTab('leads'); window.scrollTo(0, 0);
+                } }, 'Reply'),
+                sent.length ? h('div', { class: 'muted' }, sent.length + ' sent') : null)
+            : h('span', { class: 'muted' }, 'No email')
         ];
       });
+
+      var target = replyingTo ? leads.filter(function (l) { return l.id === replyingTo; })[0] : null;
       panel.replaceChildren(
         h('h2', {}, 'Enquiries'),
-        card('', table(['Received', 'Name', 'Contact', 'Type', 'Message', 'Status'], rows))
+        target ? replyCard(target, byLead[target.id] || []) : null,
+        card('', table(['Received', 'Name', 'Contact', 'Type', 'Message', 'Status', 'Reply'], rows))
       );
     });
   }

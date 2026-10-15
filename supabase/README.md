@@ -49,6 +49,12 @@ Then in the Supabase dashboard:
 2. Authentication > Sign In / Providers: turn off "Allow new users to sign up".
 3. To add another admin: `insert into public.admins (email) values ('name@example.com');` (lowercase).
 
+Replying to enquiries from the Enquiries tab uses a second function, which reuses the same SMTP secrets and only accepts signed-in admins:
+
+```bash
+supabase functions deploy reply-lead
+```
+
 Open `admin.html` and sign in.
 
 ## 7) Useful tables for the business

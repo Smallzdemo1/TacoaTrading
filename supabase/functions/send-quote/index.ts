@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     // The quote content always comes from the database, never from the request.
     const { data: quote, error: quoteError } = await admin
       .from('quotes')
-      .select('id, quote_no, customer_name, notes, valid_until, total_amount, status, created_at, quote_items(description, qty, unit_price, total_amount)')
+      .select('id, quote_no, customer_name, notes, valid_until, total_amount, status, created_at, quote_items(description, detail, qty, unit_price, total_amount)')
       .eq('id', quoteId)
       .single();
     if (quoteError || !quote) return json(404, { ok: false, error: 'Quote not found.' });
@@ -82,11 +82,11 @@ Deno.serve(async (req) => {
 
     const quoteNo = 'QUO-' + String(quote.quote_no).padStart(6, '0');
     const validText = new Date(quote.valid_until + 'T00:00:00').toLocaleDateString('en-GB', { dateStyle: 'long' });
-    const lines = (quote.quote_items ?? []) as Array<{ description: string; qty: number; unit_price: number; total_amount: number }>;
+    const lines = (quote.quote_items ?? []) as Array<{ description: string; detail: string | null; qty: number; unit_price: number; total_amount: number }>;
 
     const rowsHtml = lines.map((l) => `
       <tr>
-        <td style="padding:8px;border-bottom:1px solid #e3ece7">${esc(l.description)}</td>
+        <td style="padding:8px;border-bottom:1px solid #e3ece7">${esc(l.description)}${l.detail ? `<br /><span style="color:#555;font-size:12px">${esc(l.detail)}</span>` : ''}</td>
         <td style="padding:8px;border-bottom:1px solid #e3ece7;text-align:right">${qtyFmt(l.qty)} sqm</td>
         <td style="padding:8px;border-bottom:1px solid #e3ece7;text-align:right">${money(l.unit_price)}</td>
         <td style="padding:8px;border-bottom:1px solid #e3ece7;text-align:right">${money(l.total_amount)}</td>
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       'Tacoa General Trading',
       `Quote ${quoteNo} - valid until ${validText}`,
       '',
-      ...lines.map((l) => `${l.description}: ${qtyFmt(l.qty)} sqm x ${money(l.unit_price)} = ${money(l.total_amount)}`),
+      ...lines.map((l) => `${l.description}${l.detail ? ' (' + l.detail + ')' : ''}: ${qtyFmt(l.qty)} sqm x ${money(l.unit_price)} = ${money(l.total_amount)}`),
       '',
       `Total: ${money(quote.total_amount)}`,
       quote.notes ? `\nNotes: ${quote.notes}` : ''

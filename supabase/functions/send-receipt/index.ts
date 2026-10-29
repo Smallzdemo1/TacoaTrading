@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
     // The receipt content always comes from the database, never from the request.
     const { data: receipt, error: receiptError } = await admin
       .from('receipts')
-      .select('id, receipt_no, customer_name, total_amount, created_at, sales(qty_sold, unit_price, total_amount, inventory(product_name))')
+      .select('id, receipt_no, customer_name, total_amount, created_at, sales(qty_sold, unit_price, total_amount, detail, inventory(product_name))')
       .eq('id', receiptId)
       .single();
     if (receiptError || !receipt) return json(404, { ok: false, error: 'Receipt not found.' });
@@ -84,12 +84,12 @@ Deno.serve(async (req) => {
       dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Harare'
     });
     const lines = (receipt.sales ?? []) as Array<{
-      qty_sold: number; unit_price: number; total_amount: number; inventory: { product_name: string } | null;
+      qty_sold: number; unit_price: number; total_amount: number; detail: string | null; inventory: { product_name: string } | null;
     }>;
 
     const rowsHtml = lines.map((l) => `
       <tr>
-        <td style="padding:8px;border-bottom:1px solid #e3ece7">${esc(l.inventory?.product_name ?? 'Item')}</td>
+        <td style="padding:8px;border-bottom:1px solid #e3ece7">${esc(l.inventory?.product_name ?? 'Item')}${l.detail ? `<br /><span style="color:#555;font-size:12px">${esc(l.detail)}</span>` : ''}</td>
         <td style="padding:8px;border-bottom:1px solid #e3ece7;text-align:right">${qtyFmt(l.qty_sold)} sqm</td>
         <td style="padding:8px;border-bottom:1px solid #e3ece7;text-align:right">${money(l.unit_price)}</td>
         <td style="padding:8px;border-bottom:1px solid #e3ece7;text-align:right">${money(l.total_amount)}</td>
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       'Tacoa General Trading',
       `Receipt ${receiptNo} - ${dateText}`,
       '',
-      ...lines.map((l) => `${l.inventory?.product_name ?? 'Item'}: ${qtyFmt(l.qty_sold)} sqm x ${money(l.unit_price)} = ${money(l.total_amount)}`),
+      ...lines.map((l) => `${l.inventory?.product_name ?? 'Item'}${l.detail ? ' (' + l.detail + ')' : ''}: ${qtyFmt(l.qty_sold)} sqm x ${money(l.unit_price)} = ${money(l.total_amount)}`),
       '',
       `Total: ${money(receipt.total_amount)}`
     ].join('\n');

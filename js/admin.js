@@ -102,6 +102,105 @@
     return products.filter(function (p) { return p.id === id; })[0];
   }
 
+  // The "add a line" row shared by Sales and Quotes. Glass is sold two ways, each with its own
+  // price per sqm: whole sheets (selling price) or cut to size (cut price). Stock is always sqm.
+  // onAdd({ product_id, name, qty, price, detail }); stockLeft(p) returns sqm still sellable, or null for no check.
+  function itemEntry(onAdd, stockLeft) {
+    var product = productSelect(true);
+    product.required = false; // part of the add-item row, not of the final submit
+    var mode = h('select', {},
+      h('option', { value: 'sheet' }, 'Whole sheets'), h('option', { value: 'cut' }, 'Cut to size'));
+    var sheets = h('input', { type: 'number', min: '1', step: '1', value: '1' });
+    var width = h('input', { type: 'number', min: '1', step: '1', placeholder: 'e.g. 890' });
+    var height = h('input', { type: 'number', min: '1', step: '1', placeholder: 'e.g. 500' });
+    var pieces = h('input', { type: 'number', min: '1', step: '1', value: '1' });
+    var price = h('input', { type: 'number', min: '0', step: '0.01' });
+    var info = h('p', { class: 'hint' }, '');
+    var fSheets = field('Number of sheets', sheets);
+    var cutFields = [field('Piece width (mm)', width), field('Piece height (mm)', height), field('Number of pieces', pieces)];
+
+    function round2(n) { return Math.round(n * 100) / 100; }
+    function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+    // Works out sqm and the receipt wording for the current inputs; { error } when they are not usable.
+    function calc() {
+      var p = productById(product.value);
+      if (!p) return { error: 'Choose a product.' };
+      var sw = Number(p.sheet_width_mm), sh = Number(p.sheet_height_mm);
+      var n, qty, detail;
+      if (mode.value === 'sheet') {
+        n = parseInt(sheets.value, 10);
+        if (!(n >= 1)) return { error: 'Enter the number of sheets.' };
+        qty = round2(n * sw * sh / 1e6);
+        detail = plural(n, 'whole sheet', 'whole sheets') + ' (' + sw + ' x ' + sh + ' mm)';
+      } else {
+        var w = parseInt(width.value, 10), l = parseInt(height.value, 10);
+        n = parseInt(pieces.value, 10);
+        if (!(w >= 1 && l >= 1 && n >= 1)) return { error: 'Enter the piece size and how many pieces.' };
+        if (Math.min(w, l) > Math.min(sw, sh) || Math.max(w, l) > Math.max(sw, sh)) {
+          return { error: 'That piece is bigger than a ' + sw + ' x ' + sh + ' mm sheet.' };
+        }
+        qty = round2(n * w * l / 1e6);
+        detail = plural(n, 'cut piece', 'cut pieces') + ' of ' + w + ' x ' + l + ' mm';
+      }
+      if (!(qty > 0)) return { error: 'That quantity is too small.' };
+      return { p: p, qty: qty, detail: detail };
+    }
+
+    function defaultPrice() {
+      var p = productById(product.value);
+      var v = p ? Number(mode.value === 'sheet' ? p.selling_price : p.cut_price) : 0;
+      price.value = v > 0 ? v : '';
+    }
+
+    function refresh() {
+      var isSheet = mode.value === 'sheet';
+      fSheets.style.display = isSheet ? '' : 'none';
+      cutFields.forEach(function (f) { f.style.display = isSheet ? 'none' : ''; });
+      var c = calc();
+      var pr = parseFloat(price.value);
+      info.textContent = c.error ? '' : '= ' + qtyFmt(c.qty) + ' sqm' +
+        (pr >= 0 ? ' \u00b7 ' + money(Math.round(c.qty * pr * 100) / 100) : '');
+    }
+
+    function add() {
+      var c = calc();
+      if (c.error) { toast(c.error, 'error'); return; }
+      var pr = parseFloat(price.value);
+      if (!(pr >= 0)) { toast('Enter the price per sqm.', 'error'); return; }
+      var left = stockLeft ? stockLeft(c.p) : null;
+      if (left !== null && c.qty > left + 1e-9) {
+        toast('Only ' + qtyFmt(Math.max(left, 0)) + ' sqm of ' + c.p.product_name + ' left to sell.', 'error');
+        return;
+      }
+      onAdd({ product_id: c.p.id, name: c.p.product_name, qty: c.qty, price: pr, detail: c.detail });
+      product.value = ''; sheets.value = '1'; width.value = ''; height.value = ''; pieces.value = '1'; price.value = '';
+      refresh();
+      product.focus();
+    }
+
+    product.addEventListener('change', function () { defaultPrice(); refresh(); });
+    mode.addEventListener('change', function () { defaultPrice(); refresh(); });
+    [sheets, width, height, pieces, price].forEach(function (el) {
+      el.addEventListener('input', refresh);
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+    });
+
+    var el = h('div', {},
+      h('div', { class: 'form-grid' },
+        field('Product', product), field('Sold as', mode), fSheets, cutFields,
+        field('Price per sqm ($)', price),
+        h('div', {}, h('button', { type: 'button', class: 'btn btn-small', onclick: add }, 'Add item'))),
+      info);
+    refresh();
+    return el;
+  }
+
+  // Item name plus how it was sold, for tables.
+  function itemLabel(name, detail) {
+    return detail ? h('div', {}, name, h('div', { class: 'muted' }, detail)) : name;
+  }
+
   function numberInput(opts) {
     return h('input', Object.assign({ type: 'number', required: true }, opts));
   }
@@ -195,6 +294,9 @@
       var datalist = h('datalist', { id: 'categories' }, Object.keys(cats).map(function (c) { return h('option', { value: c }); }));
       var cost = numberInput({ min: '0', step: '0.01', value: e ? e.unit_cost : '' });
       var price = numberInput({ min: '0', step: '0.01', value: e ? e.selling_price : '' });
+      var cutPrice = numberInput({ min: '0', step: '0.01', value: e ? e.cut_price : '0' });
+      var sheetW = numberInput({ min: '1', step: '1', value: e ? e.sheet_width_mm : '1830' });
+      var sheetH = numberInput({ min: '1', step: '1', value: e ? e.sheet_height_mm : '2440' });
       var reorder = numberInput({ min: '0', step: '0.01', value: e ? e.reorder_level : '0' });
       var opening = e ? null : numberInput({ min: '0', step: '0.01', value: '0' });
 
@@ -204,6 +306,9 @@
           category: category.value.trim(),
           unit_cost: parseFloat(cost.value),
           selling_price: parseFloat(price.value),
+          cut_price: parseFloat(cutPrice.value),
+          sheet_width_mm: parseInt(sheetW.value, 10),
+          sheet_height_mm: parseInt(sheetH.value, 10),
           reorder_level: parseFloat(reorder.value)
         };
         if (e) {
@@ -224,7 +329,8 @@
       }, e ? 'Product updated' : 'Product added') },
         h('div', { class: 'form-grid' },
           field('Product name', name), field('Category', category), datalist,
-          field('Cost per sqm ($)', cost), field('Selling price per sqm ($)', price),
+          field('Cost per sqm ($)', cost), field('Whole-sheet price per sqm ($)', price), field('Cut-to-size price per sqm ($)', cutPrice),
+          field('Sheet width (mm)', sheetW), field('Sheet height (mm)', sheetH),
           field('Reorder level (sqm)', reorder), opening ? field('Opening stock (sqm)', opening) : null),
         h('div', { class: 'form-actions' },
           h('button', { type: 'submit', class: 'btn btn-primary' }, e ? 'Save changes' : 'Add product'),
@@ -238,7 +344,7 @@
         return [
           p.product_name, p.category,
           h('span', { class: 'badge ' + (Number(p.stock_on_hand) === 0 ? 'bad' : low ? 'warn' : '') }, qtyFmt(p.stock_on_hand)),
-          money(p.unit_cost), money(p.selling_price), pct(margin),
+          money(p.unit_cost), money(p.selling_price), money(p.cut_price), pct(margin),
           money(p.stock_on_hand * p.unit_cost),
           h('button', { type: 'button', class: 'btn btn-small', onclick: function () {
             editing = p; showTab('inventory'); window.scrollTo(0, 0);
@@ -249,7 +355,7 @@
       panel.replaceChildren(
         h('h2', {}, 'Inventory'),
         card(e ? 'Edit product' : 'Add product', form),
-        card('Products', table(['Product', 'Category', 'In stock (sqm)', 'Cost / sqm', 'Price / sqm', 'Margin', 'Stock value', ''], rows, [2, 3, 4, 5, 6]))
+        card('Products', table(['Product', 'Category', 'In stock (sqm)', 'Cost / sqm', 'Sheet price / sqm', 'Cut price / sqm', 'Sheet margin', 'Stock value', ''], rows, [2, 3, 4, 5, 6, 7]))
       );
     });
   }
@@ -264,7 +370,7 @@
 
   function fetchReceipt(id) {
     return db.from('receipts')
-      .select('*, sales(qty_sold, unit_price, total_amount, inventory(product_name))')
+      .select('*, sales(qty_sold, unit_price, total_amount, detail, inventory(product_name))')
       .eq('id', id).single().then(must);
   }
 
@@ -281,7 +387,7 @@
       dateLine: fmtDate(r.created_at),
       who: [r.customer_name || 'Walk-in customer', r.customer_phone, r.customer_email].filter(Boolean),
       lines: (r.sales || []).map(function (s) {
-        return { name: s.inventory ? s.inventory.product_name : 'Item', qty: s.qty_sold, price: s.unit_price, amount: s.total_amount };
+        return { name: s.inventory ? s.inventory.product_name : 'Item', detail: s.detail, qty: s.qty_sold, price: s.unit_price, amount: s.total_amount };
       }),
       total: r.total_amount,
       footer: ['Thank you for your business. Please keep this receipt as proof of purchase.'],
@@ -328,6 +434,7 @@
 
     d.lines.forEach(function (s) {
       var name = doc.splitTextToSize(s.name, 80);
+      if (s.detail) name = name.concat(doc.splitTextToSize(s.detail, 80));
       var rowH = name.length * 5 + 3;
       if (y + rowH > 265) { doc.addPage(); y = 20; header(); }
       doc.text(name, L + 2, y);
@@ -398,7 +505,7 @@
     } }, r.emailed_at ? 'Email again' : 'Email receipt');
 
     var rows = lines.map(function (s) {
-      return [s.inventory ? s.inventory.product_name : '\u2014', qtyFmt(s.qty_sold), money(s.unit_price), money(s.total_amount)];
+      return [itemLabel(s.inventory ? s.inventory.product_name : '\u2014', s.detail), qtyFmt(s.qty_sold), money(s.unit_price), money(s.total_amount)];
     });
     var totalRow = ['Total', '', '', money(r.total_amount)];
     totalRow.rowClass = 'total';
@@ -435,19 +542,24 @@
       phone.addEventListener('input', function () { saleDraft.phone = phone.value; });
       email.addEventListener('input', function () { saleDraft.email = email.value; });
 
-      var product = productSelect(true);
-      product.required = false; // part of the add-item row, not of the final submit
-      var qty = h('input', { type: 'number', min: '0.01', step: '0.01', value: '1' });
-      var price = h('input', { type: 'number', min: '0', step: '0.01' });
       var cartBox = h('div', {});
       var total = h('strong', {}, money(0));
+
+      var entry = itemEntry(function (item) {
+        cart.push(item);
+        redrawCart();
+      }, function (p) {
+        var already = cart.filter(function (c) { return c.product_id === p.id; })
+          .reduce(function (s, c) { return s + c.qty; }, 0);
+        return Number(p.stock_on_hand) - already;
+      });
 
       function redrawCart() {
         var sum = 0;
         var rows = cart.map(function (c, i) {
           var amount = Math.round(c.qty * c.price * 100) / 100;
           sum += amount;
-          return [c.name, qtyFmt(c.qty), money(c.price), money(amount),
+          return [itemLabel(c.name, c.detail), qtyFmt(c.qty), money(c.price), money(amount),
             h('button', { type: 'button', class: 'btn btn-small', onclick: function () { cart.splice(i, 1); redrawCart(); } }, 'Remove')];
         });
         total.textContent = money(sum);
@@ -456,36 +568,9 @@
           : h('p', { class: 'empty' }, 'No items added yet.'));
       }
 
-      function addItem() {
-        var p = productById(product.value);
-        var q = Math.round(parseFloat(qty.value) * 100) / 100;
-        var pr = parseFloat(price.value);
-        if (!p) { toast('Choose a product.', 'error'); return; }
-        if (!(q > 0)) { toast('Enter a quantity greater than zero.', 'error'); return; }
-        if (!(pr >= 0)) { toast('Enter the price per sqm.', 'error'); return; }
-        var already = cart.filter(function (c) { return c.product_id === p.id; })
-          .reduce(function (s, c) { return s + c.qty; }, 0);
-        if (already + q > Number(p.stock_on_hand)) {
-          toast('Only ' + qtyFmt(p.stock_on_hand) + ' sqm of ' + p.product_name + ' in stock.', 'error');
-          return;
-        }
-        cart.push({ product_id: p.id, name: p.product_name, qty: q, price: pr });
-        product.value = ''; qty.value = '1'; price.value = '';
-        redrawCart();
-        product.focus();
-      }
-
-      product.addEventListener('change', function () {
-        var p = productById(product.value);
-        price.value = p && Number(p.selling_price) > 0 ? p.selling_price : '';
-      });
-      [qty, price].forEach(function (el) {
-        el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
-      });
-
       var form = h('form', { onsubmit: submitHandler(function () {
         if (!cart.length) throw new Error('Add at least one item to the sale.');
-        var items = cart.map(function (c) { return { product_id: c.product_id, qty: c.qty, unit_price: c.price }; });
+        var items = cart.map(function (c) { return { product_id: c.product_id, qty: c.qty, unit_price: c.price, detail: c.detail }; });
         return db.rpc('record_sale_receipt', {
           p_items: items, p_customer: customer.value, p_phone: phone.value, p_email: email.value
         }).then(must).then(function (id) {
@@ -497,9 +582,7 @@
         h('div', { class: 'form-grid' },
           field('Customer name (optional)', customer), field('Customer phone (for WhatsApp)', phone), field('Customer email', email)),
         h('h3', { style: 'margin-top:18px' }, 'Items'),
-        h('div', { class: 'form-grid' },
-          field('Product', product), field('Quantity (sqm)', qty), field('Price per sqm ($)', price),
-          h('div', {}, h('button', { type: 'button', class: 'btn btn-small', onclick: addItem }, 'Add item'))),
+        entry,
         cartBox,
         h('div', { class: 'form-actions' },
           h('button', { type: 'submit', class: 'btn btn-primary' }, 'Complete sale & create receipt'),
@@ -832,7 +915,7 @@
 
   function fetchQuote(id) {
     return db.from('quotes')
-      .select('*, quote_items(description, qty, unit_price, total_amount)')
+      .select('*, quote_items(description, detail, qty, unit_price, total_amount)')
       .eq('id', id).single().then(must);
   }
 
@@ -847,7 +930,7 @@
       dateLine: 'Valid until ' + validText(q.valid_until),
       who: [q.customer_name || 'Customer', q.customer_phone, q.customer_email].filter(Boolean),
       lines: (q.quote_items || []).map(function (i) {
-        return { name: i.description, qty: i.qty, price: i.unit_price, amount: i.total_amount };
+        return { name: i.description, detail: i.detail, qty: i.qty, price: i.unit_price, amount: i.total_amount };
       }),
       total: q.total_amount,
       footer: footer,
@@ -867,7 +950,7 @@
     var spec = quoteSpec(q);
     var isOpen = q.status === 'open';
     var rows = (q.quote_items || []).map(function (i) {
-      return [i.description, qtyFmt(i.qty), money(i.unit_price), money(i.total_amount)];
+      return [itemLabel(i.description, i.detail), qtyFmt(i.qty), money(i.unit_price), money(i.total_amount)];
     });
     var totalRow = ['Total', '', '', money(q.total_amount)];
     totalRow.rowClass = 'total';
@@ -951,19 +1034,21 @@
       days.addEventListener('input', function () { quoteDraft.days = days.value; });
       notes.addEventListener('input', function () { quoteDraft.notes = notes.value; });
 
-      var product = productSelect(true);
-      product.required = false; // part of the add-item row, not of the final submit
-      var qty = h('input', { type: 'number', min: '0.01', step: '0.01', value: '1' });
-      var price = h('input', { type: 'number', min: '0', step: '0.01' });
       var itemsBox = h('div', {});
       var total = h('strong', {}, money(0));
+
+      // Quotes don't check or reserve stock; that happens when the sale is recorded.
+      var entry = itemEntry(function (item) {
+        quoteItems.push(item);
+        redraw();
+      }, null);
 
       function redraw() {
         var sum = 0;
         var rows = quoteItems.map(function (c, i) {
           var amount = Math.round(c.qty * c.price * 100) / 100;
           sum += amount;
-          return [c.name, qtyFmt(c.qty), money(c.price), money(amount),
+          return [itemLabel(c.name, c.detail), qtyFmt(c.qty), money(c.price), money(amount),
             h('button', { type: 'button', class: 'btn btn-small', onclick: function () { quoteItems.splice(i, 1); redraw(); } }, 'Remove')];
         });
         total.textContent = money(sum);
@@ -972,30 +1057,9 @@
           : h('p', { class: 'empty' }, 'No items added yet.'));
       }
 
-      function addItem() {
-        var p = productById(product.value);
-        var q = Math.round(parseFloat(qty.value) * 100) / 100;
-        var pr = parseFloat(price.value);
-        if (!p) { toast('Choose a product.', 'error'); return; }
-        if (!(q > 0)) { toast('Enter a quantity greater than zero.', 'error'); return; }
-        if (!(pr >= 0)) { toast('Enter the price per sqm.', 'error'); return; }
-        quoteItems.push({ product_id: p.id, name: p.product_name, qty: q, price: pr });
-        product.value = ''; qty.value = '1'; price.value = '';
-        redraw();
-        product.focus();
-      }
-
-      product.addEventListener('change', function () {
-        var p = productById(product.value);
-        price.value = p && Number(p.selling_price) > 0 ? p.selling_price : '';
-      });
-      [qty, price].forEach(function (el) {
-        el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
-      });
-
       var form = h('form', { onsubmit: submitHandler(function () {
         if (!quoteItems.length) throw new Error('Add at least one item to the quote.');
-        var items = quoteItems.map(function (c) { return { product_id: c.product_id, qty: c.qty, unit_price: c.price }; });
+        var items = quoteItems.map(function (c) { return { product_id: c.product_id, qty: c.qty, unit_price: c.price, detail: c.detail }; });
         return db.rpc('create_quote', {
           p_items: items, p_customer: customer.value, p_phone: phone.value, p_email: email.value,
           p_valid_days: parseInt(days.value, 10), p_notes: notes.value, p_lead_id: quoteDraft.leadId
@@ -1011,9 +1075,7 @@
           field('Customer name', customer), field('Customer phone (for WhatsApp)', phone), field('Customer email', email),
           field('Valid for (days)', days)),
         h('h3', { style: 'margin-top:18px' }, 'Items'),
-        h('div', { class: 'form-grid' },
-          field('Product', product), field('Quantity (sqm)', qty), field('Price per sqm ($)', price),
-          h('div', {}, h('button', { type: 'button', class: 'btn btn-small', onclick: addItem }, 'Add item'))),
+        entry,
         itemsBox,
         field('Notes (shown on the quote)', notes),
         h('div', { class: 'form-actions' },

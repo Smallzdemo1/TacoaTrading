@@ -34,6 +34,14 @@ grant execute on function public.is_admin() to authenticated;
 -- ---------------------------------------------------------------------------
 alter table public.sales add column if not exists unit_cost numeric(12,2) not null default 0;
 
+-- Two ways to sell glass: whole sheets (selling_price per sqm) or cut to size (cut_price per sqm).
+-- Stock is always in sqm. sheet_*_mm is the full sheet size used to convert sheets to sqm.
+alter table public.inventory add column if not exists cut_price numeric(12,2) not null default 0 check (cut_price >= 0);
+alter table public.inventory add column if not exists sheet_width_mm integer not null default 1830 check (sheet_width_mm > 0);
+alter table public.inventory add column if not exists sheet_height_mm integer not null default 2440 check (sheet_height_mm > 0);
+-- How a line was sold, e.g. "2 whole sheets (1830 x 2440 mm)" or "9 cut pieces of 890 x 500 mm".
+alter table public.sales add column if not exists detail text;
+
 -- One receipt can cover several sale lines (one line per product).
 create table if not exists public.receipts (
   id uuid primary key default gen_random_uuid(),
@@ -132,6 +140,7 @@ create policy "Admins insert accounting" on public.accounting_entries for insert
 -- ---------------------------------------------------------------------------
 drop function if exists public.record_sale(uuid, integer, numeric, text);
 drop function if exists public.record_sale(uuid, numeric, numeric, text);
+drop function if exists public.record_sale(uuid, numeric, numeric, text, uuid);
 drop function if exists public.record_purchase(uuid, integer, numeric, text);
 drop function if exists public.record_adjustment(uuid, text, integer, text);
 
@@ -140,7 +149,8 @@ create or replace function public.record_sale(
   p_qty numeric,
   p_unit_price numeric,
   p_customer text default null,
-  p_receipt_id uuid default null
+  p_receipt_id uuid default null,
+  p_detail text default null
 )
 returns public.sales
 language plpgsql
@@ -166,8 +176,9 @@ begin
      set stock_on_hand = stock_on_hand - p_qty, updated_at = now()
    where id = p_product_id;
 
-  insert into public.sales (product_id, qty_sold, unit_price, unit_cost, total_amount, customer_name, receipt_id)
-  values (p_product_id, p_qty, p_unit_price, v_inv.unit_cost, round(p_qty * p_unit_price, 2), nullif(trim(p_customer), ''), p_receipt_id)
+  insert into public.sales (product_id, qty_sold, unit_price, unit_cost, total_amount, customer_name, receipt_id, detail)
+  values (p_product_id, p_qty, p_unit_price, v_inv.unit_cost, round(p_qty * p_unit_price, 2), nullif(trim(p_customer), ''), p_receipt_id,
+          nullif(left(trim(p_detail), 200), ''))
   returning * into v_sale;
 
   insert into public.accounting_entries (entry_type, amount, description)
@@ -216,7 +227,8 @@ begin
       (v_item ->> 'qty')::numeric,
       (v_item ->> 'unit_price')::numeric,
       p_customer,
-      v_receipt.id);
+      v_receipt.id,
+      v_item ->> 'detail');
   end loop;
 
   return v_receipt.id;
@@ -396,14 +408,14 @@ $$;
 -- ---------------------------------------------------------------------------
 -- Only signed-in users may call the functions (and each also checks is_admin()).
 -- ---------------------------------------------------------------------------
-revoke all on function public.record_sale(uuid, numeric, numeric, text, uuid) from public, anon;
+revoke all on function public.record_sale(uuid, numeric, numeric, text, uuid, text) from public, anon;
 revoke all on function public.record_sale_receipt(jsonb, text, text, text) from public, anon;
 revoke all on function public.record_purchase(uuid, numeric, numeric, text) from public, anon;
 revoke all on function public.record_adjustment(uuid, text, numeric, text) from public, anon;
 revoke all on function public.record_expense(text, numeric, text) from public, anon;
 revoke all on function public.accounting_report(timestamptz, timestamptz) from public, anon;
 
-grant execute on function public.record_sale(uuid, numeric, numeric, text, uuid) to authenticated;
+grant execute on function public.record_sale(uuid, numeric, numeric, text, uuid, text) to authenticated;
 grant execute on function public.record_sale_receipt(jsonb, text, text, text) to authenticated;
 grant execute on function public.record_purchase(uuid, numeric, numeric, text) to authenticated;
 grant execute on function public.record_adjustment(uuid, text, numeric, text) to authenticated;
@@ -458,6 +470,7 @@ create table if not exists public.quote_items (
   unit_price numeric(12,2) not null check (unit_price >= 0),
   total_amount numeric(12,2) not null
 );
+alter table public.quote_items add column if not exists detail text;
 create index if not exists idx_quote_items_quote on public.quote_items(quote_id);
 create index if not exists idx_quotes_created_at on public.quotes(created_at desc);
 
@@ -533,8 +546,9 @@ begin
     select * into v_inv from public.inventory where id = (v_item ->> 'product_id')::uuid;
     if not found then raise exception 'Product not found'; end if;
 
-    insert into public.quote_items (quote_id, product_id, description, qty, unit_price, total_amount)
-    values (v_quote.id, v_inv.id, v_inv.product_name, v_qty, v_price, round(v_qty * v_price, 2));
+    insert into public.quote_items (quote_id, product_id, description, qty, unit_price, total_amount, detail)
+    values (v_quote.id, v_inv.id, v_inv.product_name, v_qty, v_price, round(v_qty * v_price, 2),
+            nullif(left(trim(v_item ->> 'detail'), 200), ''));
   end loop;
 
   if p_lead_id is not null then
@@ -562,7 +576,7 @@ begin
   if not found then raise exception 'Quote not found'; end if;
   if v_q.status <> 'open' then raise exception 'This quote is already %', v_q.status; end if;
 
-  select jsonb_agg(jsonb_build_object('product_id', product_id, 'qty', qty, 'unit_price', unit_price))
+  select jsonb_agg(jsonb_build_object('product_id', product_id, 'qty', qty, 'unit_price', unit_price, 'detail', detail))
     into v_items from public.quote_items where quote_id = p_quote_id;
 
   v_receipt := public.record_sale_receipt(v_items, v_q.customer_name, v_q.customer_phone, v_q.customer_email);

@@ -427,3 +427,166 @@ create index if not exists idx_lead_replies_lead on public.lead_replies(lead_id,
 alter table public.lead_replies enable row level security;
 drop policy if exists "Admins read lead replies" on public.lead_replies;
 create policy "Admins read lead replies" on public.lead_replies for select to authenticated using (public.is_admin());
+
+-- ---------------------------------------------------------------------------
+-- Quotes. A quote never touches stock or the accounts. When the customer
+-- accepts and pays, accept_quote() turns it into a normal receipt (sale).
+-- ---------------------------------------------------------------------------
+create table if not exists public.quotes (
+  id uuid primary key default gen_random_uuid(),
+  quote_no bigint generated always as identity unique,
+  lead_id uuid references public.leads(id) on delete set null,
+  customer_name text,
+  customer_phone text,
+  customer_email text,
+  notes text,
+  valid_until date not null,
+  total_amount numeric(12,2) not null default 0,
+  status text not null default 'open' check (status in ('open', 'accepted', 'declined')),
+  receipt_id uuid references public.receipts(id),
+  created_by text,
+  emailed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.quote_items (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references public.quotes(id) on delete cascade,
+  product_id uuid not null references public.inventory(id),
+  description text not null,
+  qty numeric(12,2) not null check (qty > 0),
+  unit_price numeric(12,2) not null check (unit_price >= 0),
+  total_amount numeric(12,2) not null
+);
+create index if not exists idx_quote_items_quote on public.quote_items(quote_id);
+create index if not exists idx_quotes_created_at on public.quotes(created_at desc);
+
+alter table public.quotes enable row level security;
+alter table public.quote_items enable row level security;
+
+drop policy if exists "Admins read quotes" on public.quotes;
+drop policy if exists "Admins insert quotes" on public.quotes;
+drop policy if exists "Admins update quotes" on public.quotes;
+create policy "Admins read quotes" on public.quotes for select to authenticated using (public.is_admin());
+create policy "Admins insert quotes" on public.quotes for insert to authenticated with check (public.is_admin());
+create policy "Admins update quotes" on public.quotes for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "Admins read quote items" on public.quote_items;
+drop policy if exists "Admins insert quote items" on public.quote_items;
+create policy "Admins read quote items" on public.quote_items for select to authenticated using (public.is_admin());
+create policy "Admins insert quote items" on public.quote_items for insert to authenticated with check (public.is_admin());
+
+-- Only the workflow fields of a quote can change after it is created; prices and items are fixed.
+revoke update on public.quotes from anon, authenticated;
+grant update (status, receipt_id, emailed_at) on public.quotes to authenticated;
+
+create or replace function public.create_quote(
+  p_items jsonb,
+  p_customer text default null,
+  p_phone text default null,
+  p_email text default null,
+  p_valid_days integer default 14,
+  p_notes text default null,
+  p_lead_id uuid default null
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_quote public.quotes%rowtype;
+  v_item jsonb;
+  v_inv public.inventory%rowtype;
+  v_qty numeric;
+  v_price numeric;
+  v_total numeric(12,2) := 0;
+begin
+  if not public.is_admin() then raise exception 'Not authorised'; end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Add at least one item';
+  end if;
+  if jsonb_array_length(p_items) > 50 then raise exception 'Too many items on one quote'; end if;
+  if p_valid_days is null or p_valid_days < 1 or p_valid_days > 365 then
+    raise exception 'Validity must be between 1 and 365 days';
+  end if;
+
+  select coalesce(sum(round(round((i ->> 'qty')::numeric, 2) * round((i ->> 'unit_price')::numeric, 2), 2)), 0)
+    into v_total
+    from jsonb_array_elements(p_items) as i;
+
+  for v_item in select * from jsonb_array_elements(p_items) loop
+    v_qty := round((v_item ->> 'qty')::numeric, 2);
+    v_price := round((v_item ->> 'unit_price')::numeric, 2);
+    if v_qty is null or v_qty <= 0 then raise exception 'Quantity must be greater than zero'; end if;
+    if v_price is null or v_price < 0 then raise exception 'Price cannot be negative'; end if;
+  end loop;
+
+  insert into public.quotes (lead_id, customer_name, customer_phone, customer_email, notes, valid_until, total_amount, created_by)
+  values (p_lead_id, nullif(trim(p_customer), ''), nullif(trim(p_phone), ''), nullif(lower(trim(p_email)), ''),
+          nullif(trim(p_notes), ''), current_date + p_valid_days, v_total, auth.jwt() ->> 'email')
+  returning * into v_quote;
+
+  for v_item in select * from jsonb_array_elements(p_items) loop
+    v_qty := round((v_item ->> 'qty')::numeric, 2);
+    v_price := round((v_item ->> 'unit_price')::numeric, 2);
+    select * into v_inv from public.inventory where id = (v_item ->> 'product_id')::uuid;
+    if not found then raise exception 'Product not found'; end if;
+
+    insert into public.quote_items (quote_id, product_id, description, qty, unit_price, total_amount)
+    values (v_quote.id, v_inv.id, v_inv.product_name, v_qty, v_price, round(v_qty * v_price, 2));
+  end loop;
+
+  if p_lead_id is not null then
+    update public.leads set status = 'contacted' where id = p_lead_id and status = 'new';
+  end if;
+
+  return v_quote.id;
+end;
+$$;
+
+-- Customer accepted and paid: record it as a normal sale. Stock is checked and removed here.
+create or replace function public.accept_quote(p_quote_id uuid)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_q public.quotes%rowtype;
+  v_items jsonb;
+  v_receipt uuid;
+begin
+  if not public.is_admin() then raise exception 'Not authorised'; end if;
+  select * into v_q from public.quotes where id = p_quote_id for update;
+  if not found then raise exception 'Quote not found'; end if;
+  if v_q.status <> 'open' then raise exception 'This quote is already %', v_q.status; end if;
+
+  select jsonb_agg(jsonb_build_object('product_id', product_id, 'qty', qty, 'unit_price', unit_price))
+    into v_items from public.quote_items where quote_id = p_quote_id;
+
+  v_receipt := public.record_sale_receipt(v_items, v_q.customer_name, v_q.customer_phone, v_q.customer_email);
+  update public.quotes set status = 'accepted', receipt_id = v_receipt where id = p_quote_id;
+  return v_receipt;
+end;
+$$;
+
+create or replace function public.decline_quote(p_quote_id uuid)
+returns void
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then raise exception 'Not authorised'; end if;
+  update public.quotes set status = 'declined' where id = p_quote_id and status = 'open';
+  if not found then raise exception 'Only an open quote can be marked declined'; end if;
+end;
+$$;
+
+revoke all on function public.create_quote(jsonb, text, text, text, integer, text, uuid) from public, anon;
+revoke all on function public.accept_quote(uuid) from public, anon;
+revoke all on function public.decline_quote(uuid) from public, anon;
+grant execute on function public.create_quote(jsonb, text, text, text, integer, text, uuid) to authenticated;
+grant execute on function public.accept_quote(uuid) to authenticated;
+grant execute on function public.decline_quote(uuid) to authenticated;

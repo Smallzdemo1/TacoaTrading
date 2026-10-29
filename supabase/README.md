@@ -61,6 +61,12 @@ Emailing a sales receipt (Sales tab) uses `send-receipt`, deployed the same way.
 supabase functions deploy send-receipt
 ```
 
+Quotes (Quotes tab, or "Create quote" on an enquiry) are emailed with `send-quote`. A quote changes nothing in stock or the accounts until you press "Customer paid: record sale", which turns it into a normal receipt.
+
+```bash
+supabase functions deploy send-quote
+```
+
 Open `admin.html` and sign in.
 
 ## 7) Useful tables for the business

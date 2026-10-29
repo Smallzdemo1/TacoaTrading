@@ -55,6 +55,12 @@ Replying to enquiries from the Enquiries tab uses a second function, which reuse
 supabase functions deploy reply-lead
 ```
 
+Emailing a sales receipt (Sales tab) uses `send-receipt`, deployed the same way. Receipts, their PDF and the WhatsApp share are generated in the browser; WhatsApp needs no server setup.
+
+```bash
+supabase functions deploy send-receipt
+```
+
 Open `admin.html` and sign in.
 
 ## 7) Useful tables for the business

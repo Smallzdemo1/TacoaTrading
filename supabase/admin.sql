@@ -34,6 +34,22 @@ grant execute on function public.is_admin() to authenticated;
 -- ---------------------------------------------------------------------------
 alter table public.sales add column if not exists unit_cost numeric(12,2) not null default 0;
 
+-- One receipt can cover several sale lines (one line per product).
+create table if not exists public.receipts (
+  id uuid primary key default gen_random_uuid(),
+  receipt_no bigint generated always as identity unique,
+  customer_name text,
+  customer_phone text,
+  customer_email text,
+  total_amount numeric(12,2) not null default 0,
+  created_by text,
+  emailed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.receipts enable row level security;
+alter table public.sales add column if not exists receipt_id uuid references public.receipts(id);
+create index if not exists idx_sales_receipt on public.sales(receipt_id);
+
 -- All quantities are square metres (sqm), so they need decimals.
 alter table public.inventory alter column stock_on_hand type numeric(12,2);
 alter table public.inventory alter column reorder_level type numeric(12,2);
@@ -89,6 +105,11 @@ drop policy if exists "Admins insert sales" on public.sales;
 create policy "Admins read sales" on public.sales for select to authenticated using (public.is_admin());
 create policy "Admins insert sales" on public.sales for insert to authenticated with check (public.is_admin());
 
+drop policy if exists "Admins read receipts" on public.receipts;
+drop policy if exists "Admins insert receipts" on public.receipts;
+create policy "Admins read receipts" on public.receipts for select to authenticated using (public.is_admin());
+create policy "Admins insert receipts" on public.receipts for insert to authenticated with check (public.is_admin());
+
 drop policy if exists "Admins read purchases" on public.purchases;
 drop policy if exists "Admins insert purchases" on public.purchases;
 create policy "Admins read purchases" on public.purchases for select to authenticated using (public.is_admin());
@@ -110,6 +131,7 @@ create policy "Admins insert accounting" on public.accounting_entries for insert
 -- Accounting sign convention: money in is positive, money out / write-offs negative.
 -- ---------------------------------------------------------------------------
 drop function if exists public.record_sale(uuid, integer, numeric, text);
+drop function if exists public.record_sale(uuid, numeric, numeric, text);
 drop function if exists public.record_purchase(uuid, integer, numeric, text);
 drop function if exists public.record_adjustment(uuid, text, integer, text);
 
@@ -117,7 +139,8 @@ create or replace function public.record_sale(
   p_product_id uuid,
   p_qty numeric,
   p_unit_price numeric,
-  p_customer text default null
+  p_customer text default null,
+  p_receipt_id uuid default null
 )
 returns public.sales
 language plpgsql
@@ -143,14 +166,60 @@ begin
      set stock_on_hand = stock_on_hand - p_qty, updated_at = now()
    where id = p_product_id;
 
-  insert into public.sales (product_id, qty_sold, unit_price, unit_cost, total_amount, customer_name)
-  values (p_product_id, p_qty, p_unit_price, v_inv.unit_cost, round(p_qty * p_unit_price, 2), nullif(trim(p_customer), ''))
+  insert into public.sales (product_id, qty_sold, unit_price, unit_cost, total_amount, customer_name, receipt_id)
+  values (p_product_id, p_qty, p_unit_price, v_inv.unit_cost, round(p_qty * p_unit_price, 2), nullif(trim(p_customer), ''), p_receipt_id)
   returning * into v_sale;
 
   insert into public.accounting_entries (entry_type, amount, description)
   values ('sale', v_sale.total_amount, format('Sale: %s x %s @ %s', p_qty, v_inv.product_name, p_unit_price));
 
   return v_sale;
+end;
+$$;
+
+-- A whole receipt in one transaction: every line is recorded (stock out, ledger entry)
+-- or none are. p_items = [{"product_id": "...", "qty": 2.5, "unit_price": 4.5}, ...]
+create or replace function public.record_sale_receipt(
+  p_items jsonb,
+  p_customer text default null,
+  p_phone text default null,
+  p_email text default null
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_receipt public.receipts%rowtype;
+  v_item jsonb;
+  v_total numeric(12,2);
+begin
+  if not public.is_admin() then raise exception 'Not authorised'; end if;
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'Add at least one item';
+  end if;
+  if jsonb_array_length(p_items) > 50 then raise exception 'Too many items on one receipt'; end if;
+
+  select coalesce(sum(round(round((i ->> 'qty')::numeric, 2) * (i ->> 'unit_price')::numeric, 2)), 0)
+    into v_total
+    from jsonb_array_elements(p_items) as i;
+
+  insert into public.receipts (customer_name, customer_phone, customer_email, total_amount, created_by)
+  values (nullif(trim(p_customer), ''), nullif(trim(p_phone), ''), nullif(lower(trim(p_email)), ''),
+          v_total, auth.jwt() ->> 'email')
+  returning * into v_receipt;
+
+  for v_item in select * from jsonb_array_elements(p_items) loop
+    perform public.record_sale(
+      (v_item ->> 'product_id')::uuid,
+      (v_item ->> 'qty')::numeric,
+      (v_item ->> 'unit_price')::numeric,
+      p_customer,
+      v_receipt.id);
+  end loop;
+
+  return v_receipt.id;
 end;
 $$;
 
@@ -327,13 +396,15 @@ $$;
 -- ---------------------------------------------------------------------------
 -- Only signed-in users may call the functions (and each also checks is_admin()).
 -- ---------------------------------------------------------------------------
-revoke all on function public.record_sale(uuid, numeric, numeric, text) from public, anon;
+revoke all on function public.record_sale(uuid, numeric, numeric, text, uuid) from public, anon;
+revoke all on function public.record_sale_receipt(jsonb, text, text, text) from public, anon;
 revoke all on function public.record_purchase(uuid, numeric, numeric, text) from public, anon;
 revoke all on function public.record_adjustment(uuid, text, numeric, text) from public, anon;
 revoke all on function public.record_expense(text, numeric, text) from public, anon;
 revoke all on function public.accounting_report(timestamptz, timestamptz) from public, anon;
 
-grant execute on function public.record_sale(uuid, numeric, numeric, text) to authenticated;
+grant execute on function public.record_sale(uuid, numeric, numeric, text, uuid) to authenticated;
+grant execute on function public.record_sale_receipt(jsonb, text, text, text) to authenticated;
 grant execute on function public.record_purchase(uuid, numeric, numeric, text) to authenticated;
 grant execute on function public.record_adjustment(uuid, text, numeric, text) to authenticated;
 grant execute on function public.record_expense(text, numeric, text) to authenticated;

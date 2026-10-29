@@ -256,48 +256,246 @@
 
   // ------------------------------------------------------------------- sales
 
+  var cart = [];            // [{ product_id, name, qty, price }]
+  var viewingReceipt = null;
+  var saleDraft = { name: '', phone: '', email: '' };
+
+  function receiptNo(n) { return 'TAC-' + String(n).padStart(6, '0'); }
+
+  function fetchReceipt(id) {
+    return db.from('receipts')
+      .select('*, sales(qty_sold, unit_price, total_amount, inventory(product_name))')
+      .eq('id', id).single().then(must);
+  }
+
+  function receiptPdfName(r) { return 'Receipt-' + receiptNo(r.receipt_no) + '.pdf'; }
+
+  function buildReceiptPdf(r) {
+    var doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    var L = 15, R = 195, y = 20;
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(14, 77, 43);
+    doc.text('Tacoa General Trading', L, y);
+    doc.setFontSize(20); doc.text('RECEIPT', R, y, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 90, 90);
+    doc.text('913 Industrial Road, Kwekwe, Midlands, Zimbabwe', L, y + 6);
+    doc.text('+263 77 772 6221  |  info@tacoatrading.com', L, y + 11);
+    doc.text(receiptNo(r.receipt_no), R, y + 6, { align: 'right' });
+    doc.text(fmtDate(r.created_at), R, y + 11, { align: 'right' });
+
+    y += 24;
+    doc.setDrawColor(204, 229, 216); doc.line(L, y - 6, R, y - 6);
+    doc.setTextColor(23, 42, 31); doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold'); doc.text('Customer', L, y);
+    doc.setFont('helvetica', 'normal');
+    var who = [r.customer_name || 'Walk-in customer', r.customer_phone, r.customer_email].filter(Boolean);
+    who.forEach(function (t, i) { doc.text(String(t), L, y + 5 + i * 5); });
+    y += 5 + who.length * 5 + 6;
+
+    function header() {
+      doc.setFillColor(234, 245, 239); doc.rect(L, y - 5, R - L, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(14, 77, 43);
+      doc.text('ITEM', L + 2, y);
+      doc.text('QTY (SQM)', 128, y, { align: 'right' });
+      doc.text('PRICE / SQM', 160, y, { align: 'right' });
+      doc.text('AMOUNT', R - 2, y, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(23, 42, 31);
+      y += 8;
+    }
+    header();
+
+    (r.sales || []).forEach(function (s) {
+      var name = doc.splitTextToSize(s.inventory ? s.inventory.product_name : 'Item', 80);
+      var rowH = name.length * 5 + 3;
+      if (y + rowH > 265) { doc.addPage(); y = 20; header(); }
+      doc.text(name, L + 2, y);
+      doc.text(qtyFmt(s.qty_sold), 128, y, { align: 'right' });
+      doc.text(money(s.unit_price), 160, y, { align: 'right' });
+      doc.text(money(s.total_amount), R - 2, y, { align: 'right' });
+      y += rowH;
+      doc.setDrawColor(230, 238, 233); doc.line(L, y - 3, R, y - 3);
+    });
+
+    if (y + 22 > 280) { doc.addPage(); y = 20; }
+    y += 4;
+    doc.setDrawColor(14, 77, 43); doc.setLineWidth(0.5); doc.line(110, y - 5, R, y - 5);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+    doc.text('Total', 128, y + 1, { align: 'right' });
+    doc.text(money(r.total_amount), R - 2, y + 1, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 90, 90);
+    doc.text('Thank you for your business. Please keep this receipt as proof of purchase.', L, y + 16);
+    return doc;
+  }
+
+  // Zimbabwe numbers: 077... -> 26377..., +263... and 00263... are accepted as they are.
+  function waNumber(phone) {
+    var d = String(phone || '').replace(/\D/g, '');
+    if (d.indexOf('00') === 0) return d.slice(2);
+    if (d.charAt(0) === '0') return '263' + d.slice(1);
+    return d;
+  }
+
+  function shareOnWhatsApp(r) {
+    var doc = buildReceiptPdf(r);
+    var name = receiptPdfName(r);
+    var first = (r.customer_name || '').split(' ')[0];
+    var text = (first ? 'Hi ' + first + ', here' : 'Here') + ' is your receipt ' + receiptNo(r.receipt_no) +
+      ' from Tacoa General Trading. Total: ' + money(r.total_amount) + '. Thank you!';
+    var file = new File([doc.output('blob')], name, { type: 'application/pdf' });
+
+    // Phones: the share sheet attaches the PDF and WhatsApp is one of the choices.
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], text: text, title: name }).catch(function (e) {
+        if (!e || e.name !== 'AbortError') toast('Could not open sharing. Use Download PDF instead.', 'error');
+      });
+      return;
+    }
+    // Computers: save the PDF and open the customer's WhatsApp chat to attach it.
+    doc.save(name);
+    window.open('https://wa.me/' + waNumber(r.customer_phone) + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+    toast('PDF saved. In the WhatsApp chat, attach it with the paperclip.');
+  }
+
+  function receiptCard(r) {
+    var lines = r.sales || [];
+    var emailIn = h('input', { type: 'email', maxlength: 254, placeholder: 'customer@example.com', value: r.customer_email || '' });
+    var sendBtn = h('button', { type: 'button', class: 'btn btn-primary', onclick: function () {
+      var to = emailIn.value.trim();
+      if (!to || !emailIn.checkValidity()) { toast('Enter a valid email address.', 'error'); return; }
+      sendBtn.disabled = true;
+      var b64 = buildReceiptPdf(r).output('datauristring').split(',')[1];
+      invokeFn('send-receipt', { receiptId: r.id, to: to, pdfBase64: b64 }).then(function () {
+        toast('Receipt emailed to ' + to, 'ok');
+        sendBtn.textContent = 'Email again';
+      }).catch(function (err) {
+        toast((err && err.message) || 'The email could not be sent.', 'error');
+      }).then(function () { sendBtn.disabled = false; });
+    } }, r.emailed_at ? 'Email again' : 'Email receipt');
+
+    var rows = lines.map(function (s) {
+      return [s.inventory ? s.inventory.product_name : '\u2014', qtyFmt(s.qty_sold), money(s.unit_price), money(s.total_amount)];
+    });
+    var totalRow = ['Total', '', '', money(r.total_amount)];
+    totalRow.rowClass = 'total';
+    rows.push(totalRow);
+
+    return card('Receipt ' + receiptNo(r.receipt_no),
+      h('p', { class: 'muted' }, fmtDate(r.created_at) + ' \u00b7 ' +
+        (r.customer_name || 'Walk-in customer') + (r.customer_phone ? ' \u00b7 ' + r.customer_phone : '')),
+      table(['Item', 'Qty (sqm)', 'Price / sqm', 'Amount'], rows, [1, 2, 3]),
+      h('div', { class: 'form-actions' },
+        h('button', { type: 'button', class: 'btn btn-primary', onclick: function () { buildReceiptPdf(r).save(receiptPdfName(r)); } }, 'Download PDF'),
+        h('button', { type: 'button', class: 'btn btn-primary', onclick: function () { shareOnWhatsApp(r); } }, 'Send on WhatsApp'),
+        h('button', { type: 'button', class: 'btn btn-small', onclick: function () { viewingReceipt = null; showTab('sales'); } }, 'Close')),
+      h('div', { class: 'form-grid', style: 'margin-top:14px' },
+        field('Email to', emailIn), h('div', {}, sendBtn)),
+      r.emailed_at ? h('p', { class: 'hint' }, 'Last emailed ' + fmtDate(r.emailed_at) + '.') : null,
+      h('p', { class: 'hint' }, 'WhatsApp: on a phone this attaches the PDF through the share menu. On a computer the PDF is saved and the customer\u2019s chat opens so you can attach it.'));
+  }
+
   function renderSales() {
     return Promise.all([
       loadProducts(),
-      db.from('sales').select('*, inventory(product_name)').order('created_at', { ascending: false }).limit(100)
+      db.from('receipts').select('id, receipt_no, customer_name, total_amount, created_at, emailed_at')
+        .order('created_at', { ascending: false }).limit(50),
+      viewingReceipt ? fetchReceipt(viewingReceipt) : Promise.resolve(null)
     ]).then(function (res) {
       var history = must(res[1]);
+      var open = res[2];
+
+      var customer = h('input', { type: 'text', maxlength: 120, value: saleDraft.name });
+      var phone = h('input', { type: 'tel', maxlength: 40, placeholder: '0777 123 456', value: saleDraft.phone });
+      var email = h('input', { type: 'email', maxlength: 254, placeholder: 'optional', value: saleDraft.email });
+      customer.addEventListener('input', function () { saleDraft.name = customer.value; });
+      phone.addEventListener('input', function () { saleDraft.phone = phone.value; });
+      email.addEventListener('input', function () { saleDraft.email = email.value; });
+
       var product = productSelect(true);
-      var qty = numberInput({ min: '0.01', step: '0.01', value: '1' });
-      var price = numberInput({ min: '0', step: '0.01' });
-      var customer = h('input', { type: 'text', maxlength: 120 });
+      product.required = false; // part of the add-item row, not of the final submit
+      var qty = h('input', { type: 'number', min: '0.01', step: '0.01', value: '1' });
+      var price = h('input', { type: 'number', min: '0', step: '0.01' });
+      var cartBox = h('div', {});
       var total = h('strong', {}, money(0));
 
-      function recalc() { total.textContent = money((parseFloat(qty.value) || 0) * (parseFloat(price.value) || 0)); }
+      function redrawCart() {
+        var sum = 0;
+        var rows = cart.map(function (c, i) {
+          var amount = Math.round(c.qty * c.price * 100) / 100;
+          sum += amount;
+          return [c.name, qtyFmt(c.qty), money(c.price), money(amount),
+            h('button', { type: 'button', class: 'btn btn-small', onclick: function () { cart.splice(i, 1); redrawCart(); } }, 'Remove')];
+        });
+        total.textContent = money(sum);
+        cartBox.replaceChildren(cart.length
+          ? table(['Item', 'Qty (sqm)', 'Price / sqm', 'Amount', ''], rows, [1, 2, 3])
+          : h('p', { class: 'empty' }, 'No items added yet.'));
+      }
+
+      function addItem() {
+        var p = productById(product.value);
+        var q = Math.round(parseFloat(qty.value) * 100) / 100;
+        var pr = parseFloat(price.value);
+        if (!p) { toast('Choose a product.', 'error'); return; }
+        if (!(q > 0)) { toast('Enter a quantity greater than zero.', 'error'); return; }
+        if (!(pr >= 0)) { toast('Enter the price per sqm.', 'error'); return; }
+        var already = cart.filter(function (c) { return c.product_id === p.id; })
+          .reduce(function (s, c) { return s + c.qty; }, 0);
+        if (already + q > Number(p.stock_on_hand)) {
+          toast('Only ' + qtyFmt(p.stock_on_hand) + ' sqm of ' + p.product_name + ' in stock.', 'error');
+          return;
+        }
+        cart.push({ product_id: p.id, name: p.product_name, qty: q, price: pr });
+        product.value = ''; qty.value = '1'; price.value = '';
+        redrawCart();
+        product.focus();
+      }
+
       product.addEventListener('change', function () {
         var p = productById(product.value);
-        price.value = p ? p.selling_price : '';
-        recalc();
+        price.value = p && Number(p.selling_price) > 0 ? p.selling_price : '';
       });
-      qty.addEventListener('input', recalc);
-      price.addEventListener('input', recalc);
+      [qty, price].forEach(function (el) {
+        el.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
+      });
 
       var form = h('form', { onsubmit: submitHandler(function () {
-        return db.rpc('record_sale', {
-          p_product_id: product.value, p_qty: parseFloat(qty.value),
-          p_unit_price: parseFloat(price.value), p_customer: customer.value
-        }).then(must);
-      }, 'Sale recorded') },
+        if (!cart.length) throw new Error('Add at least one item to the sale.');
+        var items = cart.map(function (c) { return { product_id: c.product_id, qty: c.qty, unit_price: c.price }; });
+        return db.rpc('record_sale_receipt', {
+          p_items: items, p_customer: customer.value, p_phone: phone.value, p_email: email.value
+        }).then(must).then(function (id) {
+          viewingReceipt = id;
+          cart = [];
+          saleDraft = { name: '', phone: '', email: '' };
+        });
+      }, 'Sale recorded. Receipt ready below.') },
         h('div', { class: 'form-grid' },
-          field('Product', product), field('Quantity (sqm)', qty), field('Price per sqm ($)', price), field('Customer (optional)', customer)),
+          field('Customer name (optional)', customer), field('Customer phone (for WhatsApp)', phone), field('Customer email', email)),
+        h('h3', { style: 'margin-top:18px' }, 'Items'),
+        h('div', { class: 'form-grid' },
+          field('Product', product), field('Quantity (sqm)', qty), field('Price per sqm ($)', price),
+          h('div', {}, h('button', { type: 'button', class: 'btn btn-small', onclick: addItem }, 'Add item'))),
+        cartBox,
         h('div', { class: 'form-actions' },
-          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Record sale'),
+          h('button', { type: 'submit', class: 'btn btn-primary' }, 'Complete sale & create receipt'),
           h('span', {}, 'Total: ', total))
       );
+      redrawCart();
+
+      var rows = history.map(function (r) {
+        return [receiptNo(r.receipt_no), fmtDate(r.created_at), r.customer_name || '\u2014', money(r.total_amount),
+          r.emailed_at ? h('span', { class: 'badge' }, 'Emailed') : '',
+          h('button', { type: 'button', class: 'btn btn-small', onclick: function () {
+            viewingReceipt = r.id; showTab('sales'); window.scrollTo(0, 0);
+          } }, 'View')];
+      });
 
       panel.replaceChildren(
         h('h2', {}, 'Sales'),
-        card('Record a sale', form),
-        card('Recent sales', table(['Date', 'Product', 'Qty (sqm)', 'Price / sqm', 'Total', 'Customer'],
-          history.map(function (s) {
-            return [fmtDate(s.created_at), s.inventory ? s.inventory.product_name : '—', qtyFmt(s.qty_sold),
-              money(s.unit_price), money(s.total_amount), s.customer_name || '—'];
-          }), [2, 3, 4]))
+        open ? receiptCard(open) : null,
+        card('New sale', form),
+        card('Recent receipts', table(['Receipt', 'Date', 'Customer', 'Total', '', ''], rows, [3]))
       );
     });
   }
@@ -486,16 +684,19 @@
   };
 
   function sendReply(lead, subject, message) {
-    return db.functions.invoke('reply-lead', {
-      body: { leadId: lead.id, subject: subject, message: message }
-    }).then(function (res) {
-      if (!res.error) return;
+    return invokeFn('reply-lead', { leadId: lead.id, subject: subject, message: message });
+  }
+
+  // Calls an admin-only edge function and turns its JSON error into a thrown Error.
+  function invokeFn(name, body) {
+    return db.functions.invoke(name, { body: body }).then(function (res) {
+      if (!res.error) return res.data;
       var ctx = res.error.context;
       if (ctx && typeof ctx.json === 'function') {
-        return ctx.json().then(function (b) { throw new Error((b && b.error) || 'The reply could not be sent.'); },
-          function () { throw new Error('The reply could not be sent.'); });
+        return ctx.json().then(function (b) { throw new Error((b && b.error) || 'The request failed.'); },
+          function () { throw new Error('The request failed.'); });
       }
-      throw new Error(res.error.message || 'The reply could not be sent.');
+      throw new Error(res.error.message || 'The request failed.');
     });
   }
 
